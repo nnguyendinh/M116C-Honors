@@ -3,15 +3,35 @@
 `timescale 1ns/1ns // Tell Questa what time scale to run at
 
 module file1(counter); //declare a new module named test with one port called counter
+
+
+	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
+	always begin
+		#10
+		clk = ~clk;
+	end
+
 	
-	output reg[3:0] counter = 0;	//declare counter as a 4-bit output register that initializes to 0
+	output reg[3:0] counter = 0;	//i dont think we care about this it was jsut what i copied and pasted
 	
-	reg [7:0] mem[127:0];
+	reg [7:0] mem[127:0];	// Instruction Memory I guess
+	
+	// General Pipeline:
+	
+	// Instruction Fetch -> Pipeline Buffer #1 -> Decode Stage -> Pipeline Buffer #2 -> Rename Stage
+	
+	// Pipeline Buffer #1
+	reg[31:0] instruction1;
+	reg[31:0] instruction2;
+	
+	// Decode Stage Regs
+
 	reg[31:0] instr1;
 	reg[6:0] optcode;
 	reg[4:0] rs1;
 	reg[4:0] rs2;
 	reg[4:0] rd;
+	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	

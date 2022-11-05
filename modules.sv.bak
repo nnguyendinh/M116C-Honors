@@ -1,0 +1,40 @@
+`timescale 1 ns / 1 ns //This line tells the simulator what time scale to use with simulation delays.
+							  //Feel free to ignore this for now.
+
+module decodeMessage(encodedText, decodedText);
+	input [191:0] encodedText; //this is our input
+	output [191:0] decodedText; //this is our output wire!
+	wire [191:0] stage1Out; //this is a wire we will use to connect our two stages
+    
+
+	/*
+	NOTE: ------------------------------------------------------------------------------------------------------
+		Comments in Verilog work similarly to C++, denoted with the slash and asterisk. 
+		You can have single line comments too -- use "//" before anything you want to comment out
+	------------------------------------------------------------------------------------------------------------
+	*/
+
+	partOne UUT1(.in(encodedText), .out(stage1Out)); //.in(encodedText) means connect the `encodedText` wire to the port in partOne called `in`
+
+	//DONE: The first module (partOne) is already instantiated, but we still need to instantiate the partTwo message here as well.
+	partTwo UUT2(.in(stage1Out), .out(decodedText));
+	
+endmodule
+
+module decode(in, opcode, rs1, rs2, rd, instr);
+	input [31:0] in;
+	output [6:0] opcode;
+	output [4:0] rs1;
+	output [4:0] rs2;
+	output [4:0] rd;
+	output [31:0] instr;
+
+	assign opcode = in[6:0];
+	assign rs1 = in[19:15];
+	assign rs2 = in[24:20];
+	assign rd = in[11:7];
+	assign instr = in[31:0];
+	
+endmodule
+	
+ 
