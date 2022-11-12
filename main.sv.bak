@@ -75,32 +75,6 @@ module file1(counter); //declare a new module named test with one port called co
 		#100;			//delay for 100 ticks (delcared as 1ns at the top!)
 		$stop;		//tell simulator to stop the simuation
 		
-		
-	//Rename stage
-	//keep track of the free pool
-	//how to represent the P-reg? actual pointers?
-	
-	//Algorithm: for each destination register, assign a P-reg from the free pool
-	//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
-	
-	//RAT has the registers initially assigned to some pointers
-	//x1 --> p1
-	//x2 --> p2
-	//x3 --> p3
-	//x4 --> p4
-	//x5 --> p5
-	
-	//Free pool is initially:
-	//p6
-	//p7
-	//p8
-	//p9
-	//p10
-	
-	//essentially: for the destination registers, pick the first free P-reg
-	
-	//for the source registers, grab the P-reg they're currently assigned to
-	
 	
 	
 	
