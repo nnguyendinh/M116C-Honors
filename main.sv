@@ -1,5 +1,5 @@
 
-
+//`include "M116C-Honors/modules.sv"
 `timescale 1ns/1ns // Tell Questa what time scale to run at
 
 package p;
@@ -36,18 +36,15 @@ module main(counter); //declare a new module named test with one port called cou
 	// Decode Stage Regs
 
 	reg[31:0] instr1;
-	reg[6:0] optcode;
+	reg[6:0] opcode;
 	reg[4:0] rs1;
 	reg[4:0] rs2;
 	reg[4:0] rd;
 	reg[31:0] instr_;
-	
-	//Decode stage
-	decode dec(instr1, opcode, rs1, rs2, rd, instr_);
-	
-	//Rename stage
-	rename ren(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
-	
+	reg [5:0] ps1;			// Physical registers are 6 bit because we have 128 of them
+	reg [5:0] ps2;
+	reg [5:0] pd;
+	reg [6:0] opcode_;
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
@@ -86,10 +83,10 @@ module main(counter); //declare a new module named test with one port called cou
 	//LW: imm[11;0] rs1 010 rd 0000011
 	//SW: imm[11:5] rs2 rs1 010 imm[4:0] 0100011
 	
-	optcode = instr1[6:0];
-	rs1 = instr1[19:15];
-	rs2 = instr1[24:20];
-	rd = instr1[11:7];
+	//optcode = instr1[6:0];
+	//rs1 = instr1[19:15];
+	//rs2 = instr1[24:20];
+	//rd = instr1[11:7];
 	
 
 	//$display("control: %b", control);
@@ -100,7 +97,11 @@ module main(counter); //declare a new module named test with one port called cou
 		#100;			//delay for 100 ticks (delcared as 1ns at the top!)
 		$stop;		//tell simulator to stop the simuation
 	
-
+	//Decode stage
+	decode dec(instr1, opcode, rs1, rs2, rd, instr_);
+	
+	//Rename stage
+	rename ren(opcode, rs1, rs2, rd, instr1, opcode_, ps1, ps2, pd, instr_, p_regs, rat);
 	
 	
 	//Dispatch stage

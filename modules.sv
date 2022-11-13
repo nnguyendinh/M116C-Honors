@@ -25,9 +25,7 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 	input [4:0] rs2;
 	input [4:0] rd;
 	input [31:0] instr;
-	//input [5:0] rat[4:0];
-	//input [8:0] p_regs[5:0];
-	output [5:0] opcode_;
+	output [6:0] opcode_;
 	output [5:0] ps1;			// Physical registers are 6 bit because we have 128 of them
 	output [5:0] ps2;
 	output [5:0] pd;
