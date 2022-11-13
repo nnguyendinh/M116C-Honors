@@ -22,11 +22,12 @@ module main(counter); //declare a new module named test with one port called cou
 	
 	//loop so that all rat values are assigned to p1 to p32 and first 32 p_regs are also all 1
 	int n = 0;
-	while(n < 32)
-	begin
-		rat[n] = n;
-		p_regs[n][0] = 1;
-	end 
+	initial begin
+		while(n < 32) begin
+			rat[n] = n;
+			p_regs[n][0] = 1;
+		end 
+	end
 	
 	// General Pipeline:
 	
@@ -88,7 +89,7 @@ module main(counter); //declare a new module named test with one port called cou
 		#100;			//delay for 100 ticks (delcared as 1ns at the top!)
 		$stop;		//tell simulator to stop the simuation
 	
-	
+	//Decode stage
 	decode(instr1, opcode, rs1, rs2, rd, instr_);
 	
 	//Rename stage
