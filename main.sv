@@ -63,8 +63,8 @@ module main(counter); //declare a new module named test with one port called cou
 
 	
 	
-	$readmemb("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/test.txt", mem);
-
+	$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
+	
 	instr1 = {mem[0],mem[1],mem[2],mem[3]};
 
 	$display("Instr: %b", instr1);
@@ -82,6 +82,8 @@ module main(counter); //declare a new module named test with one port called cou
 	//LW: imm[11;0] rs1 010 rd 0000011
 	//SW: imm[11:5] rs2 rs1 010 imm[4:0] 0100011
 
+	$display("FREE_P: %b", p_regs[2]);
+	
 	$display("opcode: %b", opcode);
 	$display("rs1: %b", rs1);
 	$display("rs2: %b", rs2);

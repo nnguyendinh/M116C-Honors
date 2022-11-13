@@ -37,7 +37,7 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 	import p::rat;
 	import p::p_regs;
 	
-	initial begin 
+	always@(*) begin
 	
 		found_free = 0;
 		free_p = 0;
@@ -51,18 +51,22 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 				found_free = 1;
 				free_p = n;
 			end
-			n = n + 1;
+			//$display("n: %d , p_reg[n]: %d", n, p_regs[n]);
 		end
 		//update RAT
 		rat[rd] = free_p;
 		//update value in "free pool" (actually list of all p_regs)
-		p_regs[free_p] [0] = 1;
+		
+		
+		
+		//p_regs[free_p][0] = 1;
+		//p_regs[0] = 1;
+		
+		
+		
+		$display("FREE_P: %b", free_p);
 		
 		//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
-		
-	end
-	
-	always@(*) begin
 	
 		ps1 = rat[rs1];
 		ps2 = rat[rs2];
