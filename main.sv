@@ -2,6 +2,12 @@
 
 `timescale 1ns/1ns // Tell Questa what time scale to run at
 
+package p;
+	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
+	reg [8:0] p_regs[63:0]; //kind-of free pool --> contains value that each phy reg points to, and a beginning flag for if there is a current value attached to the phy reg
+endpackage
+	
+
 module main(counter); //declare a new module named test with one port called counter
 
 
@@ -14,20 +20,10 @@ module main(counter); //declare a new module named test with one port called cou
 	
 	output reg[3:0] counter = 0;	//i dont think we care about this it was jsut what i copied and pasted
 	
+	import p::rat;
+	import p::p_regs;
+	
 	reg [7:0] mem[127:0];	// Instruction Memory I guess
-	
-	reg [5:0] rat[4:0]; //RAT - maps 32 architectural registers to physical register
-	
-	reg [8:0] p_regs[5:0]; //kind-of free pool --> contains value that each phy reg points to, and a beginning flag for if there is a current value attached to the phy reg
-	
-	//loop so that all rat values are assigned to p1 to p32 and first 32 p_regs are also all 1
-	int n = 0;
-	initial begin
-		while(n < 32) begin
-			rat[n] = n;
-			p_regs[n][0] = 1;
-		end 
-	end
 	
 	// General Pipeline:
 	
@@ -46,8 +42,23 @@ module main(counter); //declare a new module named test with one port called cou
 	reg[4:0] rd;
 	reg[31:0] instr_;
 	
+	//Decode stage
+	decode dec(instr1, opcode, rs1, rs2, rd, instr_);
+	
+	//Rename stage
+	rename ren(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
+	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
+	
+	//loop so that all rat values are assigned to p1 to p32 and first 32 p_regs are also all 1
+	int n;
+
+	for(n = 0; n < 32; n = n + 1) begin
+		//rat[n] = n;
+		//p_regs[n][0] = 1;
+	end 
+
 	
 	
 	$readmemb("test.txt", mem);
@@ -81,19 +92,15 @@ module main(counter); //declare a new module named test with one port called cou
 	rd = instr1[11:7];
 	
 
-	$display("control: %b", control);
-	$display("rs1: %b", rs1);
-	$display("rs2: %b", rs2);
-	$display("rd: %b", rd);
+	//$display("control: %b", control);
+	//$display("rs1: %b", rs1);
+	//$display("rs2: %b", rs2);
+	//$display("rd: %b", rd);
 	
 		#100;			//delay for 100 ticks (delcared as 1ns at the top!)
 		$stop;		//tell simulator to stop the simuation
 	
-	//Decode stage
-	decode(instr1, opcode, rs1, rs2, rd, instr_);
-	
-	//Rename stage
-	rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_, p_regs, rat);
+
 	
 	
 	//Dispatch stage
