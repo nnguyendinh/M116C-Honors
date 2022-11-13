@@ -25,34 +25,28 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 	input [4:0] rs2;
 	input [4:0] rd;
 	input [31:0] instr;
-	output [6:0] opcode_;
-	output [5:0] ps1;			// Physical registers are 6 bit because we have 128 of them
-	output [5:0] ps2;
-	output [5:0] pd;
-	output [31:0] instr_;
-	int n = 0;
-	int found_free = 0;
-	int free_p = 0;
+	output reg [6:0] opcode_;
+	output reg [5:0] ps1;			// Physical registers are 6 bit because we have 128 of them
+	output reg [5:0] ps2;
+	output reg [5:0] pd;
+	output reg [31:0] instr_;
+	integer n;
+	integer found_free;
+	integer free_p;
 	
 	import p::rat;
 	import p::p_regs;
 	
 	initial begin 
 	
-		// Lmao insert rename logic here
+		found_free = 0;
+		free_p = 0;
 		
-		//keep track of the free pool
-		
-		//Algorithm: for each destination register, assign a P-reg from the free pool
-		//Find first free P-reg
-		
-		//$display("control: %p", p_regs[0+:6][0]);
-		//p_col = p_regs[0+:6][0];
 		//free_p = p_col.find_first_index(x) with (x == 0);
 		
-		while (n < 64 && found_free == 0)
+		for (n = 0; n < 64; n = n + 1)
 		begin
-			if (p_regs[n][0] == 0)
+			if (p_regs[n][0] == 0 && found_free == 1)
 			begin
 				found_free = 1;
 				free_p = n;
@@ -66,13 +60,18 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 		
 		//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
 		
-		assign ps1 = rat[rs1];
-		assign ps2 = rat[rs2];
-		assign pd = free_p;
-		assign opcode_ = opcode;	// The signals we are passing and not changing
-		assign instr_ = instr;
-		
 	end
+	
+	always@(*) begin
+	
+		ps1 = rat[rs1];
+		ps2 = rat[rs2];
+		pd = free_p;
+		opcode_ = opcode;	// The signals we are passing and not changing
+		instr_ = instr;
+	
+	end
+	
 endmodule
 	
 // module reservationStation(?)

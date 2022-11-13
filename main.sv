@@ -27,8 +27,6 @@ module main(counter); //declare a new module named test with one port called cou
 	
 	// General Pipeline:
 	
-	// Instruction Fetch -> Pipeline Buffer #1 -> Decode Stage -> Pipeline Buffer #2 -> Rename Stage
-	
 	// Pipeline Buffer #1
 	reg[31:0] instruction1;
 	reg[31:0] instruction2;
@@ -40,37 +38,38 @@ module main(counter); //declare a new module named test with one port called cou
 	reg[4:0] rs1;
 	reg[4:0] rs2;
 	reg[4:0] rd;
+	reg[31:0] instr_d;
 	reg[31:0] instr_;
 	reg [5:0] ps1;			// Physical registers are 6 bit because we have 128 of them
 	reg [5:0] ps2;
 	reg [5:0] pd;
 	reg [6:0] opcode_;
 	
+	//Decode stage
+	decode dec(instr1, opcode, rs1, rs2, rd, instr_d);
+	
+	//Rename stage
+	rename ren(opcode, rs1, rs2, rd, instr_d, opcode_, ps1, ps2, pd, instr_);
+	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
 	//loop so that all rat values are assigned to p1 to p32 and first 32 p_regs are also all 1
-	int n;
+	integer n;
 
 	for(n = 0; n < 32; n = n + 1) begin
-		//rat[n] = n;
-		//p_regs[n][0] = 1;
+		rat[n] = n;
+		p_regs[n][0] = 1;
 	end 
 
 	
 	
-	$readmemb("test.txt", mem);
+	$readmemb("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/test.txt", mem);
 
-	//Instruction fetch
-	//fetch 1 instruction
-	//int i = 0;
 	instr1 = {mem[0],mem[1],mem[2],mem[3]};
 
 	$display("Instr: %b", instr1);
 
-	
-
-	//if next instruction is 0
-	//stop fetching
+	#100;			//delay for 100 ticks (delcared as 1ns at the top!)
 	
 	//Decode stage
 	//ADD, SUB, ADDI, XOR, ANDI, SRA, LW, SW
@@ -82,26 +81,18 @@ module main(counter); //declare a new module named test with one port called cou
 	//SRA: 0100000 rs2 rs1 101 rd 0110011
 	//LW: imm[11;0] rs1 010 rd 0000011
 	//SW: imm[11:5] rs2 rs1 010 imm[4:0] 0100011
-	
-	//optcode = instr1[6:0];
-	//rs1 = instr1[19:15];
-	//rs2 = instr1[24:20];
-	//rd = instr1[11:7];
-	
 
-	//$display("control: %b", control);
-	//$display("rs1: %b", rs1);
-	//$display("rs2: %b", rs2);
-	//$display("rd: %b", rd);
+	$display("opcode: %b", opcode);
+	$display("rs1: %b", rs1);
+	$display("rs2: %b", rs2);
+	$display("rd: %b", rd);
 	
-		#100;			//delay for 100 ticks (delcared as 1ns at the top!)
-		$stop;		//tell simulator to stop the simuation
+	$display("ps1: %b", ps1);
+	$display("ps2: %b", ps2);
+	$display("pd: %b", pd);
 	
-	//Decode stage
-	decode dec(instr1, opcode, rs1, rs2, rd, instr_);
-	
-	//Rename stage
-	rename ren(opcode, rs1, rs2, rd, instr1, opcode_, ps1, ps2, pd, instr_, p_regs, rat);
+	#100;			//delay for 100 ticks (delcared as 1ns at the top!)
+	$stop;		//tell simulator to stop the simuation
 	
 	
 	//Dispatch stage
