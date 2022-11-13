@@ -61,9 +61,11 @@ module main(counter); //declare a new module named test with one port called cou
 		p_regs[n][0] = 1;
 	end 
 
+	for(n = 32; n < 64; n = n + 1) begin
+		p_regs[n][0] = 0;
+	end 
 	
-	
-	$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
+	$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
 	
 	instr1 = {mem[0],mem[1],mem[2],mem[3]};
 

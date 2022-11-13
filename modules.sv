@@ -46,7 +46,8 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 		
 		for (n = 0; n < 64; n = n + 1)
 		begin
-			if (p_regs[n][0] == 0 && found_free == 1)
+			#1 $display("p_reg[n][0]: %b", p_regs[n][0]);
+			if (p_regs[n][0] == 0 && found_free == 0)
 			begin
 				found_free = 1;
 				free_p = n;
@@ -59,8 +60,8 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 		
 		
 		
+		#1 $display("free_p: %d , p_reg[free_p]: %b", free_p, p_regs[free_p][0]);
 		//p_regs[free_p][0] = 1;
-		//p_regs[0] = 1;
 		
 		
 		
