@@ -69,7 +69,7 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 	integer free_p;
 	
 	import p::rat;
-	import p::p_regs;
+	import p::free_pool;
 	
 	always@(*) begin
 	
@@ -80,22 +80,21 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 		
 		for (n = 0; n < 64; n = n + 1)
 		begin
-			#1 $display("p_reg[n][0]: %b", p_regs[n][0]);
-			if (p_regs[n][0] == 0 && found_free == 0)
+			#1 $display("free_pool[n]: %b", free_pool[n]);
+			if (free_pool[n] == 0 && found_free == 0)
 			begin
 				found_free = 1;
 				free_p = n;
 			end
-			//$display("n: %d , p_reg[n]: %d", n, p_regs[n]);
+			//$display("n: %d , p_reg[n]: %d", n, free_pool[n]);
 		end
 		//update RAT
 		rat[rd] = free_p;
-		//update value in "free pool" (actually list of all p_regs)
+		//update value in "free pool" (actually list of all free_pool)
+		free_pool[free_p] = 1'b1;
 		
-		
-		
-		#1 $display("free_p: %d , p_reg[free_p]: %b", free_p, p_regs[free_p][0]);
-		//p_regs[free_p][0] = 1;
+		#1 $display("free_p: %d , free_pool[free_p]: %b", free_p, free_pool[free_p]);
+		//free_pool[free_p][0] = 1;
 		
 		
 		

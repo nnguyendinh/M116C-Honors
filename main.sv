@@ -4,7 +4,8 @@
 
 package p;
 	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
-	reg [8:0] p_regs[63:0]; //kind-of free pool --> contains value that each phy reg points to, and a beginning flag for if there is a current value attached to the phy reg
+	reg free_pool[63:0]; //kind-of free pool --> contains value that each phy reg points to, and a beginning flag for if there is a current value attached to the phy reg
+	reg [31:0] p_regs[63:0]; //data that physical regs contain
 endpackage
 	
 
@@ -21,7 +22,7 @@ module main(counter); //declare a new module named main with one port called cou
 	output reg[3:0] counter = 0;	//i dont think we care about this it was jsut what i copied and pasted
 	
 	import p::rat;
-	import p::p_regs;
+	import p::free_pool;
 	
 	reg [7:0] mem[127:0];	// Instruction Memory I guess
 	
@@ -53,16 +54,16 @@ module main(counter); //declare a new module named main with one port called cou
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
-	//loop so that all rat values are assigned to p1 to p32 and first 32 p_regs are also all 1
+	//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
 	integer n;
 
 	for(n = 0; n < 32; n = n + 1) begin
 		rat[n] = n;
-		p_regs[n][0] = 1;
+		free_pool[n] = 1;
 	end 
 
 	for(n = 32; n < 64; n = n + 1) begin
-		p_regs[n][0] = 0;
+		free_pool[n] = 0;
 	end 
 	
 	$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
@@ -74,7 +75,7 @@ module main(counter); //declare a new module named main with one port called cou
 	#100;			//delay for 100 ticks (delcared as 1ns at the top!)
 	
 
-	$display("FREE_P: %b", p_regs[2]);
+	//$display("FREE_P: %b", free_pool[2]);
 	
 	$display("opcode: %b", opcode);
 	$display("rs1: %b", rs1);
