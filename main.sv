@@ -8,7 +8,7 @@ package p;
 endpackage
 	
 
-module main(counter); //declare a new module named test with one port called counter
+module main(counter); //declare a new module named main with one port called counter
 
 
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -73,16 +73,6 @@ module main(counter); //declare a new module named test with one port called cou
 
 	#100;			//delay for 100 ticks (delcared as 1ns at the top!)
 	
-	//Decode stage
-	//ADD, SUB, ADDI, XOR, ANDI, SRA, LW, SW
-	//ADD: 0000000 rs2 rs1 000 rd 0110011
-	//SUB: 0100000 rs2 rs1 000 rd 0110011
-	//ADDI: imm[11:0] rs1 000 rd 0010011
-	//XOR: 0000000 rs2 rs1 100 rd 0110011
-	//ANDI: imm[11:0] rs1 111 rd 0010011
-	//SRA: 0100000 rs2 rs1 101 rd 0110011
-	//LW: imm[11;0] rs1 010 rd 0000011
-	//SW: imm[11:5] rs2 rs1 010 imm[4:0] 0100011
 
 	$display("FREE_P: %b", p_regs[2]);
 	
