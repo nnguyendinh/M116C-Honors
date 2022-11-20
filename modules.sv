@@ -124,11 +124,77 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 endmodule
  
 //Dispatch stage
-//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
-//Re-order buffer (ROB) --> increase ROB index by 1
-//grab register values --> grab register values from the pointers into temp registers
-//Mark sr regs as ready/not ready --> have "sr1 ready" and "sr2 ready" flags for each instruction
-//How to tell if sr regs are ready or not?
+
+module dispatch(opcode_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, opcode_1_, opcode_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, opcode_2_);
+import p::rs;
+import p::p_reg_R;
+import p::rs_row;
+
+input [6:0] opcode_1;
+input [4:0] ps1_1;
+input [4:0] ps2_1;
+input [4:0] pd_1;
+input [31:0] instr_1;
+output rs_row rs_line_1;
+output reg [6:0] opcode_1_;
+
+input [6:0] opcode_2;
+input [4:0] ps1_2;
+input [4:0] ps2_2;
+input [4:0] pd_2;
+input [31:0] instr_2;
+output rs_row rs_line_2;
+output reg [6:0] opcode_2_;
+	
+integer un; //index of first unused
+integer switch = 0;
+integer num;
+
+/*
+always@(*) begin
+	//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
+	//find first unused reservation station --> loop to find first unused every time?
+
+	rs[un].in_use = 1;
+	rs[un].dest_reg = pd_1;
+	rs[un].src_reg_1 = ps1_1;
+	rs[un].src1_ready = p_reg_R[ps1_1];
+	rs[un].src_reg_2 = ps2_1;
+	rs[un].src2_ready = p_reg_R[ps2_1];
+	
+	rs_line_1 = rs[un];
+	rs_line_2 = rs[un];
+	
+	//determine fu_index from opcode
+	if (opcode_1 == 7'b0100011 && opcode_1 == 7'b0000011) begin//if instr is LW or SW
+		rs[un].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
+	end
+	else begin
+		if(switch == 0) begin //alternate between FU 1 and 2
+			rs[un].fu_index = 0;
+			switch = 1;
+		end
+		else begin
+			rs[un].fu_index = 1; 
+			switch = 0;
+		end
+	end
+	
+	//grab index of first ROB unused
+	/*
+	for(num = 0; num < 16 && rob_found == 0; num = num + 1) begin
+		
+	end
+	
+	
+	//Re-order buffer (ROB) --> increase ROB index by 1 and mark it reserved in ROB somehow
+	//grab register values --> grab register values from the pointers into temp registers
+	//Mark sr regs as ready/not ready --> have "sr1 ready" and "sr2 ready" flags for each instruction
+	//How to tell if sr regs are ready or not?
+end
+*/
+endmodule
+
 
 //Issue stage
 //Excecute only if source registers and FU are all ready --> check the flags
