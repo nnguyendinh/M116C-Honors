@@ -2,16 +2,30 @@
 //`include "M116C-Honors/modules.sv"
 `timescale 1ns/1ns // Tell Questa what time scale to run at
 
+typedef struct packed {
+	bit in_use; //if the row is in use
+	reg[6:0] op;
+	reg[4:0] dest_reg;
+	reg[4:0] src_reg_1;
+	bit src1_ready;
+	reg[4:0] src_reg_2;
+	bit src2_ready;
+	reg [1:0] fu_index;
+	reg [3:0] rob_index;
+} res_Station;
+
+	
 package p;
 	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
 	reg free_pool[63:0]; //kind-of free pool --> contains value that each phy reg points to, and a beginning flag for if there is a current value attached to the phy reg
 	reg [31:0] p_regs[63:0]; //data that physical regs contain
+	res_Station rs [16]; //reservation Station (16 rows)
 endpackage
 	
 
 module main(instr1, rs1_ri, rs2_ri, rd_ri, ps1_ro, ps2_ro, pd_ro); //declare a new module named main with one port called counter
 
-
+	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
 	always begin
 		#10
