@@ -58,24 +58,27 @@ module decode(instr_1, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1_,
 	//assign rs2 = (opcode == 7'b0100011) ? instr[31:25]: ((opcode == 7'b0010011 || opcode == 7'b0000011) ? instr[31:20]: instr[24:20]);
 	
 	//need a flag to indicate whether to use rs2 or imm?
+	*/
 	
-	//always @(*) begin
-	//	opcode = instr[6:0];
-	//	rs1 = instr[19:15];
-	//	instr_ = instr[31:0];
+	/*
+	always @(*) begin
+		opcode = instr[6:0];
+		rs1 = instr[19:15];
+		instr_ = instr[31:0];
 		
-	//	if(opcode == 0100011) begin//SW
-	//		rs2 = instr[31:25]; //rs2 replaced by imm [11:5]
-	//		rd = instr[24:20]; //rd replaced by imm[4:0]
-	//	end else begin//ADDI, ANDI, or LW begin
-	//		rs2 = instr[24:20]; //normal rs2
-	//		rd = instr[11:7];
+		if(opcode == 0100011) begin//SW
+			rs2 = instr[31:25]; //rs2 replaced by imm [11:5]
+			rd = instr[24:20]; //rd replaced by imm[4:0]
+		end else begin//ADDI, ANDI, or LW begin
+			rs2 = instr[24:20]; //normal rs2
+			rd = instr[11:7];
 			
-	//		if (opcode == 0010011 || opcode == 0000011) begin //ADDI, ANDI, or LW
-	//			rs2 = instr[31:20]; //replace rs2 with imm[11:0]
-	//		end
-	//	end 
-	//end
+			if (opcode == 0010011 || opcode == 0000011) begin //ADDI, ANDI, or LW
+				rs2 = instr[31:20]; //replace rs2 with imm[11:0]
+			end
+		end 
+	end
+	*/
 	
 endmodule
 
