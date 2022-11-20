@@ -9,7 +9,7 @@ package p;
 endpackage
 	
 
-module main(instr1); //declare a new module named main with one port called counter
+module main(instr1, rs1_ri, rs2_ri, rd_ri, ps1_ro, ps2_ro, pd_ro); //declare a new module named main with one port called counter
 
 
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -42,13 +42,13 @@ module main(instr1); //declare a new module named main with one port called coun
 	
 	// Rename Stage Regs
 	reg[6:0] opcode_ri;
-	reg[4:0] rs1_ri;
-	reg[4:0] rs2_ri;
-	reg[4:0] rd_ri;
+	output reg[4:0] rs1_ri;
+	output reg[4:0] rs2_ri;
+	output reg[4:0] rd_ri;
 	reg[31:0] instr_ri;
-	reg [5:0] ps1_ro;			// Physical registers are 6 bit because we have 128 of them
-	reg [5:0] ps2_ro;
-	reg [5:0] pd_ro;
+	output reg [5:0] ps1_ro;			// Physical registers are 6 bit because we have 128 of them
+	output reg [5:0] ps2_ro;
+	output reg [5:0] pd_ro;
 	reg [6:0] opcode_ro;
 	reg[31:0] instr_ro;
 	

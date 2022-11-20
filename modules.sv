@@ -24,6 +24,10 @@ module decode(instr, opcode, rs1, rs2, rd, instr_);
 	assign opcode = instr[6:0];
 	assign rs1 = instr[19:15];
 	assign instr_ = instr[31:0];
+	assign rd = instr[11:7];
+	assign rs2 = instr[24:20];
+	
+	/*
 	//if opcode == SW, replace rd with imm[4:0]
 	//else, rd is [11:7]
 	assign rd = (opcode == 7'b0100011) ? instr[24:20]: instr[11:7];
@@ -32,24 +36,27 @@ module decode(instr, opcode, rs1, rs2, rd, instr_);
 	assign rs2 = (opcode == 7'b0100011) ? instr[31:25]: ((opcode == 7'b0010011 || opcode == 7'b0000011) ? instr[31:20]: instr[24:20]);
 	
 	//need a flag to indicate whether to use rs2 or imm?
+	*/
 	
-	//always @(*) begin
-	//	opcode = instr[6:0];
-	//	rs1 = instr[19:15];
-	//	instr_ = instr[31:0];
+	/*
+	always @(*) begin
+		opcode = instr[6:0];
+		rs1 = instr[19:15];
+		instr_ = instr[31:0];
 		
-	//	if(opcode == 0100011) begin//SW
-	//		rs2 = instr[31:25]; //rs2 replaced by imm [11:5]
-	//		rd = instr[24:20]; //rd replaced by imm[4:0]
-	//	end else begin//ADDI, ANDI, or LW begin
-	//		rs2 = instr[24:20]; //normal rs2
-	//		rd = instr[11:7];
+		if(opcode == 0100011) begin//SW
+			rs2 = instr[31:25]; //rs2 replaced by imm [11:5]
+			rd = instr[24:20]; //rd replaced by imm[4:0]
+		end else begin//ADDI, ANDI, or LW begin
+			rs2 = instr[24:20]; //normal rs2
+			rd = instr[11:7];
 			
-	//		if (opcode == 0010011 || opcode == 0000011) begin //ADDI, ANDI, or LW
-	//			rs2 = instr[31:20]; //replace rs2 with imm[11:0]
-	//		end
-	//	end 
-	//end
+			if (opcode == 0010011 || opcode == 0000011) begin //ADDI, ANDI, or LW
+				rs2 = instr[31:20]; //replace rs2 with imm[11:0]
+			end
+		end 
+	end
+	*/
 	
 endmodule
 
@@ -88,23 +95,27 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 			end
 			//$display("n: %d , p_reg[n]: %d", n, free_pool[n]);
 		end
+		
+		//Update source register
+		//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
+		ps1 = rat[rs1];
+		ps2 = rat[rs2];
+		
+		//update destination register
 		//update RAT
-		rat[rd] = free_p;
-		//update value in "free pool" (actually list of all free_pool)
-		free_pool[free_p] = 1'b1;
+		
+		if(rd != 0) begin
+			rat[rd] = free_p;
+			//update value in "free pool" (actually list of all free_pool)
+			free_pool[free_p] = 1'b1;
+			pd = free_p;
+		end
 		
 		//#1 $display("free_p: %d , free_pool[free_p]: %b", free_p, free_pool[free_p]);
 		//free_pool[free_p][0] = 1;
 		
 		
 		
-		$display("FREE_P: %b", free_p);
-		
-		//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
-	
-		ps1 = rat[rs1];
-		ps2 = rat[rs2];
-		pd = free_p;
 		opcode_ = opcode;	// The signals we are passing and not changing
 		instr_ = instr;
 	
