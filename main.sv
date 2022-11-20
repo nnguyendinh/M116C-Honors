@@ -9,7 +9,7 @@ package p;
 endpackage
 	
 
-module main(counter); //declare a new module named main with one port called counter
+module main(instr1); //declare a new module named main with one port called counter
 
 
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -19,7 +19,7 @@ module main(counter); //declare a new module named main with one port called cou
 	end
 
 	
-	output reg[3:0] counter = 0;	//i dont think we care about this it was jsut what i copied and pasted
+	//output reg[3:0] counter = 0;	//i dont think we care about this it was jsut what i copied and pasted
 	
 	import p::rat;
 	import p::free_pool;
@@ -33,88 +33,89 @@ module main(counter); //declare a new module named main with one port called cou
 	reg[31:0] instruction2;
 	
 	// Decode Stage Regs
-
-	reg[31:0] instr1;
-	reg[6:0] opcode;
-	reg[4:0] rs1;
-	reg[4:0] rs2;
-	reg[4:0] rd;
-	reg[31:0] instr_d;
-	reg[31:0] instr_;
-	reg [5:0] ps1;			// Physical registers are 6 bit because we have 128 of them
-	reg [5:0] ps2;
-	reg [5:0] pd;
-	reg [6:0] opcode_;
+	output reg[31:0] instr1;
+	reg[6:0] opcode_do;
+	reg[4:0] rs1_do;
+	reg[4:0] rs2_do;
+	reg[4:0] rd_do;
+	reg[31:0] instr_do;
+	
+	// Rename Stage Regs
+	reg[6:0] opcode_ri;
+	reg[4:0] rs1_ri;
+	reg[4:0] rs2_ri;
+	reg[4:0] rd_ri;
+	reg[31:0] instr_ri;
+	reg [5:0] ps1_ro;			// Physical registers are 6 bit because we have 128 of them
+	reg [5:0] ps2_ro;
+	reg [5:0] pd_ro;
+	reg [6:0] opcode_ro;
+	reg[31:0] instr_ro;
+	
+	integer program_counter = 0;
+	integer ready = 0; //flag to start always block
 	
 	//Decode stage
-	decode dec(instr1, opcode, rs1, rs2, rd, instr_d);
+	decode dec(instr1, opcode_do, rs1_do, rs2_do, rd_do, instr_do);
 	
 	//Rename stage
-	rename ren(opcode, rs1, rs2, rd, instr_d, opcode_, ps1, ps2, pd, instr_);
+	rename ren(opcode_ri, rs1_ri, rs2_ri, rd_ri, instr_ri, opcode_ro, ps1_ro, ps2_ro, pd_ro, instr_ro);
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
-	//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
-	integer n;
+		//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
+		integer n;
 
-	for(n = 0; n < 32; n = n + 1) begin
-		rat[n] = n;
-		free_pool[n] = 1;
-	end 
+		for(n = 0; n < 32; n = n + 1) begin
+			rat[n] = n;
+			free_pool[n] = 1;
+		end 
 
-	for(n = 32; n < 64; n = n + 1) begin
-		free_pool[n] = 0;
-	end 
+		for(n = 32; n < 64; n = n + 1) begin
+			free_pool[n] = 0;
+		end
 	
-	$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
-	
-	instr1 = {mem[0],mem[1],mem[2],mem[3]};
+		for(n = 0; n < 128; n = n + 1) begin
+			mem[n] = 0;
+		end
 
-	$display("Instr: %b", instr1);
-
-	#100;			//delay for 100 ticks (delcared as 1ns at the top!)
+		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
+		$display("Mem: %p", mem);
+		
+		ready = 1;
+		
+	end
 	
 
-	//$display("FREE_P: %b", free_pool[2]);
 	
-	$display("opcode: %b", opcode);
-	$display("rs1: %b", rs1);
-	$display("rs2: %b", rs2);
-	$display("rd: %b", rd);
+	//Pipeline between fetch and decode
+	always @(posedge clk) begin
+		if(ready == 1) begin
+			instr1 <= {mem[program_counter],mem[program_counter+1],mem[program_counter+2],mem[program_counter+3]};
+			
+			
+			if (instr1 == 0) begin
+				$stop;	
+			end
+			
+			
+			$display("Instr: %b", instr1);
+			program_counter = program_counter + 4;
+			
+			/*
+			#100;			//delay for 100 ticks (delcared as 1ns at the top!)
+			$stop;		//tell simulator to stop the simuation
+			*/
+		end
+	end
 	
-	$display("ps1: %b", ps1);
-	$display("ps2: %b", ps2);
-	$display("pd: %b", pd);
-	
-	#100;			//delay for 100 ticks (delcared as 1ns at the top!)
-	$stop;		//tell simulator to stop the simuation
-	
-	
-	//Dispatch stage
-	//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
-	//Re-order buffer (ROB) --> increase ROB index by 1
-	//grab register values --> grab register values from the pointers into temp registers
-	//Mark sr regs as ready/not ready --> have "sr1 ready" and "sr2 ready" flags for each instruction
-	//How to tell if sr regs are ready or not?
-	
-	//Issue stage
-	//Excecute only if source registers and FU are all ready --> check the flags
-	//Execute based on what OP the instruction is --> might have to put extra consideration for lw and sw
-	//Mark FU being used as not ready
-	
-	
-	//Complete stage
-	//copy result to ROB and mark as complete --> Have an array for ROB with the instruction and complete flag
-	//Mark FU that was being used as ready again
-	//Mark registers being used as ready
-	
-	
-	//Retire stage 
-	//Overwrite reg file with result from execution
-	//erase instruction from RS?
-	//retire instruction at top of ROB --> ?
-	//release "old" regs to architectural reg mapping --> back into RAT and free pool?
-	
+	//Pipeline between decode and rename
+	always @(posedge clk) begin
+		opcode_ri <= opcode_do;
+		rs1_ri <= rs1_do;
+		rs2_ri <= rs2_do;
+		rd_ri <= rd_do;
+		instr_ri <=	instr_do;
 	end
 	
 	

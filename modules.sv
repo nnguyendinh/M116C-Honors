@@ -80,7 +80,7 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 		
 		for (n = 0; n < 64; n = n + 1)
 		begin
-			#1 $display("free_pool[n]: %b", free_pool[n]);
+			//#1 $display("free_pool[n]: %b", free_pool[n]);
 			if (free_pool[n] == 0 && found_free == 0)
 			begin
 				found_free = 1;
@@ -93,7 +93,7 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 		//update value in "free pool" (actually list of all free_pool)
 		free_pool[free_p] = 1'b1;
 		
-		#1 $display("free_p: %d , free_pool[free_p]: %b", free_p, free_pool[free_p]);
+		//#1 $display("free_p: %d , free_pool[free_p]: %b", free_p, free_pool[free_p]);
 		//free_pool[free_p][0] = 1;
 		
 		
@@ -111,6 +111,28 @@ module rename(opcode, rs1, rs2, rd, instr, opcode_, ps1, ps2, pd, instr_);
 	end
 	
 endmodule
-	
-// module reservationStation(?)
  
+//Dispatch stage
+//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
+//Re-order buffer (ROB) --> increase ROB index by 1
+//grab register values --> grab register values from the pointers into temp registers
+//Mark sr regs as ready/not ready --> have "sr1 ready" and "sr2 ready" flags for each instruction
+//How to tell if sr regs are ready or not?
+
+//Issue stage
+//Excecute only if source registers and FU are all ready --> check the flags
+//Execute based on what OP the instruction is --> might have to put extra consideration for lw and sw
+//Mark FU being used as not ready
+
+
+//Complete stage
+//copy result to ROB and mark as complete --> Have an array for ROB with the instruction and complete flag
+//Mark FU that was being used as ready again
+//Mark registers being used as ready
+
+
+//Retire stage 
+//Overwrite reg file with result from execution
+//erase instruction from RS?
+//retire instruction at top of ROB --> ?
+//release "old" regs to architectural reg mapping --> back into RAT and free pool?
