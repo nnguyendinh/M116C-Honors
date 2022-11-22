@@ -194,6 +194,68 @@ module rename(opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_
 	
 endmodule
  
+module ALU(instr, opcode, func3, func7, ps1, ps2, pd);
+
+	//based on op code, assign each variable
+	//ADD, SUB, ADDI, XOR, ANDI, SRA
+	
+	//ADD: 0000000 rs2 rs1 000 rd 0110011
+	//SUB: 0100000 rs2 rs1 000 rd 0110011
+	//ADDI: imm[11:0] rs1 000 rd 0010011
+	//XOR: 0000000 rs2 rs1 100 rd 0110011
+	//ANDI: imm[11:0] rs1 111 rd 0010011
+	//SRA: 0100000 rs2 rs1 101 rd 0110011
+	
+	input [31:0] instr;
+	input [6:0] opcode;
+	input [2:0] func3;
+	input [6:0] func7;
+	input [5:0] ps1;
+	input [5:0] ps2;
+	input [5:0] pd;
+	
+	reg [11:0] imm = instr[31:20]
+	
+	always@(*) begin
+	
+		case (opcode) 	// r-type
+			7'b0110011: begin
+				case (func7)		// 4 cases, and default case does nothing
+					7'b0000000: begin
+						if (func3 == 3'b000) begin							// ADD
+							p_regs[pd] = p_regs[ps1] + p_regs[ps2];
+						end
+						else if (func3 == 3'b100) begin 					// XOR
+							p_regs[pd] = p_regs[ps1] + p_regs[ps2];
+						end
+					end
+					7'b0100000: begin
+						if (func3 == 3'b000) begin							// SUB
+							p_regs[pd] = p_regs[ps1] - p_regs[ps2];
+						end
+						else if (func3 == 3'b101) begin					// SRA
+							p_regs[pd] = p_regs[ps1] >>> p_regs[ps2];
+						end
+					end
+				endcase
+			7'b0010011: begin
+				if (func3 == 3'b000) begin									// ADDI
+					p_regs[pd] = p_regs[ps1] + imm;
+				end
+				else if (func3 == 3'b111) begin							// ANDI
+					p_regs[pd] = p_regs[ps1] & imm;
+				end
+			end
+		endcase
+		
+		if (pd == 0) begin
+			p_regs[pd] = 0;
+		end
+	
+	end
+endmodule
+				
+ 
 //Dispatch stage
 //place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
 //Re-order buffer (ROB) --> increase ROB index by 1
