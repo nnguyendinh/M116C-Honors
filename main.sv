@@ -118,12 +118,12 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		for(n = 0; n < 32; n = n + 1) begin
 			rat[n] = n;
 			free_pool[n] = 1;
-			p_reg_R[n] = 0;
+			p_reg_R[n] = 1;
 		end 
 
 		for(n = 32; n < 64; n = n + 1) begin
 			free_pool[n] = 0;
-			p_reg_R[n] = 0;
+			p_reg_R[n] = 1;
 		end
 	
 		for(n = 0; n < 128; n = n + 1) begin
