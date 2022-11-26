@@ -4,19 +4,19 @@
 	
 package p;
 	typedef struct packed {
-		bit in_use; //if the row is in use
+		reg in_use; //if the row is in use
 		reg[6:0] op;
 		reg[4:0] dest_reg;
 		reg[4:0] src_reg_1;
-		bit src1_ready;
+		reg src1_ready;
 		reg[4:0] src_reg_2;
-		bit src2_ready;
+		reg src2_ready;
 		reg [1:0] fu_index;
 		reg [3:0] rob_index;
 	} rs_row;
 
 	typedef struct packed {
-		bit v;
+		reg v;
 		reg[4:0] dest_reg;
 		reg[4:0] old_dest_reg;
 		reg[31:0] pc;
@@ -108,7 +108,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 					opcode_ri_2, func3_ri_2, func7_ri_2, rs1_ri_2, rs2_ri_2, rd_ri_2, instr_ri_2, opcode_ro_2, func3_ro_2, func7_ro_2, ps1_ro_2, ps2_ro_2, pd_ro_2, instr_ro_2);
 					
 	
-	dispatch dispatch(opcode_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, opcode_dio_1, opcode_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, opcode_dio_2);
+	dispatch disp(opcode_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, opcode_dio_1, opcode_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, opcode_dio_2);
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
@@ -130,8 +130,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			mem[n] = 0;
 		end
 
-		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
-		$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
+		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
+		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
 		$display("Mem: %p", mem);
 		
 		ready = 1;
@@ -173,19 +173,20 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		instr_ri_2 <= instr_do_2;
 	end
 	
+					
 	//Pipeline between rename and dispatch
 	always @(posedge clk) begin
-		opcode_dii_1 <= opcode_ro;
-		ps1_dii_1 <= ps1_ro;
-		ps2_dii_1 <= ps2_ro;
-		pd_dii_1 <= pd_ro;
-		instr_dii_1 <= instr_ro;
+		opcode_dii_1 <= opcode_ro_1;
+		ps1_dii_1 <= ps1_ro_1;
+		ps2_dii_1 <= ps2_ro_1;
+		pd_dii_1 <= pd_ro_1;
+		instr_dii_1 <= instr_ro_1;
 		
-		opcode_dii_2 <= opcode_ro;
-		ps1_dii_2 <= ps1_ro;
-		ps2_dii_2 <= ps2_ro;
-		pd_dii_2 <= pd_ro;
-		instr_dii_2 <= instr_ro;
+		opcode_dii_2 <= opcode_ro_2;
+		ps1_dii_2 <= ps1_ro_2;
+		ps2_dii_2 <= ps2_ro_2;
+		pd_dii_2 <= pd_ro_2;
+		instr_dii_2 <= instr_ro_2;
 	end
 	
 endmodule

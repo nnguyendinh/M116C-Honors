@@ -58,27 +58,6 @@ module decode(instr_1, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1_,
 	//assign rs2 = (opcode == 7'b0100011) ? instr[31:25]: ((opcode == 7'b0010011 || opcode == 7'b0000011) ? instr[31:20]: instr[24:20]);
 	
 	//need a flag to indicate whether to use rs2 or imm?
-	*/
-	
-	/*
-	always @(*) begin
-		opcode = instr[6:0];
-		rs1 = instr[19:15];
-		instr_ = instr[31:0];
-		
-		if(opcode == 0100011) begin//SW
-			rs2 = instr[31:25]; //rs2 replaced by imm [11:5]
-			rd = instr[24:20]; //rd replaced by imm[4:0]
-		end else begin//ADDI, ANDI, or LW begin
-			rs2 = instr[24:20]; //normal rs2
-			rd = instr[11:7];
-			
-			if (opcode == 0010011 || opcode == 0000011) begin //ADDI, ANDI, or LW
-				rs2 = instr[31:20]; //replace rs2 with imm[11:0]
-			end
-		end 
-	end
-	*/
 	
 endmodule
 
@@ -193,7 +172,8 @@ module rename(opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_
 	end
 	
 endmodule
- 
+
+/*
 module ALU(instr, opcode, func3, func7, ps1, ps2, pd);
 
 	//based on op code, assign each variable
@@ -214,7 +194,8 @@ module ALU(instr, opcode, func3, func7, ps1, ps2, pd);
 	input [5:0] ps2;
 	input [5:0] pd;
 	
-	reg [11:0] imm = instr[31:20]
+	reg [11:0] imm = instr[31:20];
+	
 	
 	always@(*) begin
 	
@@ -253,8 +234,9 @@ module ALU(instr, opcode, func3, func7, ps1, ps2, pd);
 		end
 	
 	end
+	
 endmodule
-				
+*/				
  
 //Dispatch stage
 
@@ -262,13 +244,14 @@ module dispatch(opcode_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, opcode_1_, opc
 import p::rs;
 import p::p_reg_R;
 import p::rs_row;
+import p::rob;
 
 input [6:0] opcode_1;
 input [4:0] ps1_1;
 input [4:0] ps2_1;
 input [4:0] pd_1;
 input [31:0] instr_1;
-output rs_row rs_line_1;
+output integer rs_line_1;
 output reg [6:0] opcode_1_;
 
 input [6:0] opcode_2;
@@ -276,27 +259,43 @@ input [4:0] ps1_2;
 input [4:0] ps2_2;
 input [4:0] pd_2;
 input [31:0] instr_2;
-output rs_row rs_line_2;
+output integer rs_line_2;
 output reg [6:0] opcode_2_;
 	
 integer un; //index of first unused
+integer un_2; //index of second unused
 integer switch = 0;
 integer num;
+integer rob_found = 0;
+integer rs_found = 0;
+integer rob_found_2 = 0;
+integer rs_found_2 = 0;
 
-/*
+
 always@(*) begin
 	//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
 	//find first unused reservation station --> loop to find first unused every time?
-
+	
+	for(num = 0; num < 16; num = num + 1) begin
+		if (rs[num].in_use == 0 && rs_found == 0) begin
+			un = num;
+			rs_found = 1;
+		end
+	end
+	
+	rs_line_1 = un; 
+	
 	rs[un].in_use = 1;
+	rs[un].op = opcode_1;
 	rs[un].dest_reg = pd_1;
 	rs[un].src_reg_1 = ps1_1;
 	rs[un].src1_ready = p_reg_R[ps1_1];
 	rs[un].src_reg_2 = ps2_1;
 	rs[un].src2_ready = p_reg_R[ps2_1];
 	
-	rs_line_1 = rs[un];
-	rs_line_2 = rs[un];
+	//Mark destination register as not ready
+	p_reg_R[pd_1] = 0;
+	
 	
 	//determine fu_index from opcode
 	if (opcode_1 == 7'b0100011 && opcode_1 == 7'b0000011) begin//if instr is LW or SW
@@ -314,18 +313,65 @@ always@(*) begin
 	end
 	
 	//grab index of first ROB unused
-	/*
-	for(num = 0; num < 16 && rob_found == 0; num = num + 1) begin
-		
+	
+	for(num = 0; num < 16; num = num + 1) begin
+		if (rob[num].v == 0 && rob_found == 0) begin
+			rs[un].rob_index = num;
+			rob_found = 1;
+		end
 	end
 	
 	
-	//Re-order buffer (ROB) --> increase ROB index by 1 and mark it reserved in ROB somehow
+	//second instruction in the cycle
+	
+	for(num = 0; num < 16; num = num + 1) begin
+		if (rs[num].in_use == 0 && rs_found_2 == 0) begin
+			un_2 = num;
+			rs_found_2 = 1;
+		end
+	end
+	
+	rs_line_2 = un_2; 
+	
+	rs[un_2].in_use = 1;
+	rs[un_2].op = opcode_2;
+	rs[un_2].dest_reg = pd_2;
+	rs[un_2].src_reg_1 = ps1_2;
+	rs[un_2].src1_ready = p_reg_R[ps1_2];
+	rs[un_2].src_reg_2 = ps2_1;
+	rs[un_2].src2_ready = p_reg_R[ps2_2];
+	
+	//Mark destination register as not ready
+	p_reg_R[pd_2] = 0;
+	
+	//determine fu_index from opcode
+	if (opcode_2 == 7'b0100011 && opcode_2 == 7'b0000011) begin//if instr is LW or SW
+		rs[un_2].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
+	end
+	else begin
+		if(switch == 0) begin //alternate between FU 1 and 2
+			rs[un_2].fu_index = 0;
+			switch = 1;
+		end
+		else begin
+			rs[un_2].fu_index = 1; 
+			switch = 0;
+		end
+	end
+	
+	//grab index of first ROB unused
+	
+	for(num = 0; num < 16; num = num + 1) begin
+		if (rob[num].v == 0 && rob_found_2 == 0) begin
+			rs[un_2].rob_index = num;
+			rob_found_2 = 1;
+		end
+	end
+	
+	
 	//grab register values --> grab register values from the pointers into temp registers
-	//Mark sr regs as ready/not ready --> have "sr1 ready" and "sr2 ready" flags for each instruction
-	//How to tell if sr regs are ready or not?
 end
-*/
+
 endmodule
 
 
