@@ -243,17 +243,17 @@ endmodule
 module dispatch(opcode_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, opcode_1_, opcode_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, opcode_2_);
 
 input [6:0] opcode_1;
-input [4:0] ps1_1;
-input [4:0] ps2_1;
-input [4:0] pd_1;
+input [5:0] ps1_1;
+input [5:0] ps2_1;
+input [5:0] pd_1;
 input [31:0] instr_1;
 output integer rs_line_1;
 output reg [6:0] opcode_1_;
 
 input [6:0] opcode_2;
-input [4:0] ps1_2;
-input [4:0] ps2_2;
-input [4:0] pd_2;
+input [5:0] ps1_2;
+input [5:0] ps2_2;
+input [5:0] pd_2;
 input [31:0] instr_2;
 output integer rs_line_2;
 output reg [6:0] opcode_2_;
@@ -302,7 +302,7 @@ always@(*) begin
 	
 	//Mark destination register as not ready
 	
-	//p_reg_R[pd_1] = 1'b0;
+	p_reg_R[pd_1] = 1'b0;
 	
 	
 	//determine fu_index from opcode
@@ -356,7 +356,7 @@ always@(*) begin
 	dum.src2_ready = p_reg_R[ps2_2];
 		
 	//Mark destination register as not ready
-	//p_reg_R[pd_2] = 0;
+	p_reg_R[pd_2] = 0;
 	
 	//determine fu_index from opcode
 	if (opcode_2 == 7'b0100011 && opcode_2 == 7'b0000011) begin//if instr is LW or SW
