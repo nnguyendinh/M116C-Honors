@@ -1,6 +1,3 @@
-`timescale 1 ns / 1 ns 
-
-/*
 module ALU(instr, opcode, func3, func7, ps1, ps2, pd);
 
 	//based on op code, assign each variable
@@ -65,24 +62,3 @@ module ALU(instr, opcode, func3, func7, ps1, ps2, pd);
 	end
 	
 endmodule
-*/				
- 
-
-
-//Issue stage
-//Excecute only if source registers and FU are all ready --> check the flags
-//Execute based on what OP the instruction is --> might have to put extra consideration for lw and sw
-//Mark FU being used as not ready
-
-
-//Complete stage
-//copy result to ROB and mark as complete --> Have an array for ROB with the instruction and complete flag
-//Mark FU that was being used as ready again
-//Mark registers being used as ready
-
-
-//Retire stage 
-//Overwrite reg file with result from execution
-//erase instruction from RS?
-//retire instruction at top of ROB --> ?
-//release "old" regs to architectural reg mapping --> back into RAT and free pool?
