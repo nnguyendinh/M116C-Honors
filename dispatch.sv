@@ -1,8 +1,11 @@
 `timescale 1 ns / 1 ns 
 
-module dispatch(opcode_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, opcode_1_, opcode_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, opcode_2_);
+module dispatch(opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, opcode_1_, 
+						opcode_2, func3_2, func7_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, opcode_2_);
 
 input [6:0] opcode_1;
+input [2:0] func3_1;
+input [6:0] func7_1;
 input [5:0] ps1_1;
 input [5:0] ps2_1;
 input [5:0] pd_1;
@@ -11,6 +14,8 @@ output integer rs_line_1;
 output reg [6:0] opcode_1_;
 
 input [6:0] opcode_2;
+input [2:0] func3_2;
+input [6:0] func7_2;
 input [5:0] ps1_2;
 input [5:0] ps2_2;
 input [5:0] pd_2;
@@ -55,6 +60,8 @@ always@(*) begin
 	
 	rs[un].in_use = 1'b1;
 	rs[un].op = opcode_1;
+	rs[un].func3 = func3_1;
+	rs[un].func7 = func7_1;
 	rs[un].dest_reg = pd_1;
 	rs[un].src_reg_1 = ps1_1;
 	rs[un].src_reg_2 = ps2_1;
@@ -142,6 +149,8 @@ always@(*) begin
 	
 	rs[un_2].in_use = 1;
 	rs[un_2].op = opcode_2;
+	rs[un_2].func3 = func3_2;
+	rs[un_2].func7 = func7_2;
 	rs[un_2].dest_reg = pd_2;
 	rs[un_2].src_reg_1 = ps1_2;
 	rs[un_2].src_reg_2 = ps2_1;

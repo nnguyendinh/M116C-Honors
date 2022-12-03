@@ -6,6 +6,8 @@ package p;
 	typedef struct packed {
 		reg in_use; //if the row is in use
 		reg[6:0] op;
+		reg [2:0] func3;
+		reg [6:0] func7;
 		reg[5:0] dest_reg;
 		reg[5:0] src_reg_1;
 		reg[31:0] src_data_1;
@@ -103,6 +105,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	//Dispatch Stage Regs
 	reg [6:0] opcode_dii_1;
+	reg [2:0] func3_dii_1;
+	reg [6:0] func7_dii_1;
 	reg [5:0] ps1_dii_1;
 	reg [5:0] ps2_dii_1;
 	reg [5:0] pd_dii_1;
@@ -111,6 +115,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [6:0] opcode_dio_1;
 	
 	reg [6:0] opcode_dii_2;
+	reg [2:0] func3_dii_2;
+	reg [6:0] func7_dii_2;
 	reg [5:0] ps1_dii_2;
 	reg [5:0] ps2_dii_2;
 	reg [5:0] pd_dii_2;
@@ -130,7 +136,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 					opcode_ri_2, func3_ri_2, func7_ri_2, rs1_ri_2, rs2_ri_2, rd_ri_2, instr_ri_2, opcode_ro_2, func3_ro_2, func7_ro_2, ps1_ro_2, ps2_ro_2, pd_ro_2, instr_ro_2);
 					
 	//Dispatch stage
-	dispatch disp(opcode_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, opcode_dio_1, opcode_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, opcode_dio_2);
+	dispatch disp(opcode_dii_1, func3_dii_1, func7_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, opcode_dio_1, 
+						opcode_dii_2, func3_dii_2, func7_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, opcode_dio_2);
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
@@ -158,8 +165,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			mem[n] = 0;
 		end
 
-		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
-		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
+		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
+		$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
 		//$display("Mem: %p", mem);
 		
 		ready = 1;
@@ -205,12 +212,16 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	//Pipeline between rename and dispatch
 	always @(posedge clk) begin
 		opcode_dii_1 <= opcode_ro_1;
+		func3_dii_1 <= func3_ro_1;
+		func7_dii_1 <= func7_ro_1;
 		ps1_dii_1 <= ps1_ro_1;
 		ps2_dii_1 <= ps2_ro_1;
 		pd_dii_1 <= pd_ro_1;
 		instr_dii_1 <= instr_ro_1;
 		
 		opcode_dii_2 <= opcode_ro_2;
+		func3_dii_2 <= func3_ro_2;
+		func7_dii_2 <= func7_ro_2;
 		ps1_dii_2 <= ps1_ro_2;
 		ps2_dii_2 <= ps2_ro_2;
 		pd_dii_2 <= pd_ro_2;
@@ -220,6 +231,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	always @(posedge clk) begin
 		$display("In Use 1: %b", rs[rs_line_dio_1].in_use);
 		$display("Op 1: %b", rs[rs_line_dio_1].op);
+		$display("Func3 1: %b", rs[rs_line_dio_1].func3);
+		$display("Func7 1: %b", rs[rs_line_dio_1].func7);
 		$display("Dest Reg 1: %b", rs[rs_line_dio_1].dest_reg);
 		$display("Src 1 Reg 1: %b", rs[rs_line_dio_1].src_reg_1);
 		$display("Src 1 Data 1: %b", rs[rs_line_dio_1].src_data_1);
@@ -232,6 +245,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		
 		$display("In Use 2: %b", rs[rs_line_dio_1].in_use);
 		$display("Op 2: %b", rs[rs_line_dio_2].op);
+		$display("Func3 2: %b", rs[rs_line_dio_2].func3);
+		$display("Func7 2: %b", rs[rs_line_dio_2].func7);
 		$display("Dest Reg 2: %b", rs[rs_line_dio_2].dest_reg);
 		$display("Src 1 Reg 2: %b", rs[rs_line_dio_2].src_reg_1);
 		$display("Src 1 Data 2: %b", rs[rs_line_dio_2].src_data_1);
