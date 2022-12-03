@@ -48,10 +48,13 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	import p::p_reg_R;
 	import p::p_regs;
 	import p::rs;
+	import p::rob;
 	
 	reg [7:0] mem[127:0];	// Instruction Memory
 	
 	// Decode Stage Regs
+	//reg enable_flag = 0;
+	reg en_flag_di;
 	output reg[31:0] instr_1;
 	reg[6:0] opcode_do_1;
 	reg[2:0] func3_do_1;
@@ -69,8 +72,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	output reg[4:0] rs2_do_2;
 	output reg[4:0] rd_do_2;
 	reg[31:0] instr_do_2;
+	reg en_flag_do;
 	
 	// Rename Stage Regs
+	reg en_flag_ri;
 	reg [6:0] opcode_ri_1;
 	reg [2:0] func3_ri_1;
 	reg [6:0] func7_ri_1;
@@ -100,8 +105,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [2:0] func3_ro_2;
 	reg [6:0] func7_ro_2;
 	reg [31:0] instr_ro_2;
+	reg en_flag_ro;
 	
 	//Dispatch Stage Regs
+	reg en_flag_dii;
 	reg [6:0] opcode_dii_1;
 	reg [5:0] ps1_dii_1;
 	reg [5:0] ps2_dii_1;
@@ -117,20 +124,23 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [31:0] instr_dii_2;
 	integer rs_line_dio_2;
 	reg [6:0] opcode_dio_2;
+	reg en_flag_dio;
+	
 	
 	integer program_counter = 0;
 	integer ready = 0; //flag to start always block
 	
 	//Decode stage
-	decode dec(instr_1, opcode_do_1, func3_do_1, func7_do_1, rs1_do_1, rs2_do_1, rd_do_1, instr_do_1, 
-					instr_2, opcode_do_2, func3_do_2, func7_do_2, rs1_do_2, rs2_do_2, rd_do_2, instr_do_2);
+	decode dec(en_flag_di, instr_1, opcode_do_1, func3_do_1, func7_do_1, rs1_do_1, rs2_do_1, rd_do_1, instr_do_1, 
+					instr_2, opcode_do_2, func3_do_2, func7_do_2, rs1_do_2, rs2_do_2, rd_do_2, instr_do_2, en_flag_do);
 	
 	//Rename stage
-	rename ren(opcode_ri_1, func3_ri_1, func7_ri_1, rs1_ri_1, rs2_ri_1, rd_ri_1, instr_ri_1, opcode_ro_1, func3_ro_1, func7_ro_1, ps1_ro_1, ps2_ro_1, pd_ro_1, instr_ro_1,
-					opcode_ri_2, func3_ri_2, func7_ri_2, rs1_ri_2, rs2_ri_2, rd_ri_2, instr_ri_2, opcode_ro_2, func3_ro_2, func7_ro_2, ps1_ro_2, ps2_ro_2, pd_ro_2, instr_ro_2);
+	rename ren(en_flag_ri, opcode_ri_1, func3_ri_1, func7_ri_1, rs1_ri_1, rs2_ri_1, rd_ri_1, instr_ri_1, opcode_ro_1, func3_ro_1, func7_ro_1, ps1_ro_1, ps2_ro_1, pd_ro_1, instr_ro_1,
+					opcode_ri_2, func3_ri_2, func7_ri_2, rs1_ri_2, rs2_ri_2, rd_ri_2, instr_ri_2, opcode_ro_2, func3_ro_2, func7_ro_2, ps1_ro_2, ps2_ro_2, pd_ro_2, instr_ro_2, en_flag_ro);
 					
 	//Dispatch stage
-	dispatch disp(opcode_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, opcode_dio_1, opcode_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, opcode_dio_2);
+	dispatch disp(en_flag_dii, opcode_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1,
+					opcode_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, en_flag_dio);
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
@@ -139,6 +149,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 
 		for(n = 0; n < 16; n = n + 1) begin
 			rs[n].in_use = 0;
+			rob[n].v = 0;
 		end 
 		
 		for(n = 0; n < 32; n = n + 1) begin
@@ -168,22 +179,34 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	//Pipeline between fetch and decode
 	always @(posedge clk) begin
+		
 		if(ready == 1) begin
 			instr_1 <= {mem[program_counter],mem[program_counter+1],mem[program_counter+2],mem[program_counter+3]};
 			instr_2 <= {mem[program_counter+4],mem[program_counter+5],mem[program_counter+6],mem[program_counter+7]};
 			
 			if (instr_1 == 0) begin
-				$stop; //remember to put stop_flag instead of this that we send through the pipeline	
+				en_flag_di <= 0;
 			end
+			
+			else begin
+				en_flag_di <= 1;
+			end
+			
+			/*
+			if(program_counter) begin
+				$stop
+			end
+			*/
 			
 			$display("Instr: %b", instr_1);
 			program_counter = program_counter + 8;
-			
+
 		end
 	end
 	
 	//Pipeline between decode and rename
 	always @(posedge clk) begin
+		en_flag_ri <= en_flag_do;
 		opcode_ri_1 <= opcode_do_1;
 		func3_ri_1 <= func3_do_1;
 		func7_ri_1 <= func7_do_1;
@@ -199,11 +222,13 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		rs2_ri_2 <= rs2_do_2;
 		rd_ri_2 <= rd_do_2;
 		instr_ri_2 <= instr_do_2;
+		
 	end
 	
 					
 	//Pipeline between rename and dispatch
 	always @(posedge clk) begin
+		en_flag_dii <= en_flag_ro;
 		opcode_dii_1 <= opcode_ro_1;
 		ps1_dii_1 <= ps1_ro_1;
 		ps2_dii_1 <= ps2_ro_1;
@@ -215,6 +240,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		ps2_dii_2 <= ps2_ro_2;
 		pd_dii_2 <= pd_ro_2;
 		instr_dii_2 <= instr_ro_2;
+		
 	end
 	
 	always @(posedge clk) begin

@@ -1,8 +1,8 @@
 `timescale 1 ns / 1 ns 
 
-module rename(opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_, func3_1_, func7_1_, ps1_1, ps2_1, pd_1, instr_1_,
-					opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2, opcode_2_, func3_2_, func7_2_, ps1_2, ps2_2, pd_2, instr_2_);
-	
+module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_, func3_1_, func7_1_, ps1_1, ps2_1, pd_1, instr_1_,
+					opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2, opcode_2_, func3_2_, func7_2_, ps1_2, ps2_2, pd_2, instr_2_, en_flag_o);
+	input en_flag_i;
 	input [6:0] opcode_1;
 	input [2:0] func3_1;
 	input [6:0] func7_1;
@@ -32,6 +32,7 @@ module rename(opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_
 	output reg [5:0] ps2_2;
 	output reg [5:0] pd_2;
 	output reg [31:0] instr_2_;
+	output reg en_flag_o;
 	
 	integer n;
 	integer found_free;
@@ -42,72 +43,97 @@ module rename(opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_
 	
 	always@(*) begin
 	
-		found_free = 0;
-		free_p = 0;
+		$display("Rename enabled: %b", en_flag_i);
 		
-		for (n = 0; n < 64; n = n + 1) begin
-			if (free_pool[n] == 0 && found_free == 0) begin
-				found_free = 1;
-				free_p = n;
+		if(en_flag_i == 1) begin
+			
+			found_free = 0;
+			free_p = 0;
+			
+			for (n = 0; n < 64; n = n + 1) begin
+				if (free_pool[n] == 0 && found_free == 0) begin
+					found_free = 1;
+					free_p = n;
+				end
 			end
-		end
+			
+			//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
+			ps1_1 = rat[rs1_1];
+			ps2_1 = rat[rs2_1];
+			
+			//update RAT
+			if (rd_1 != 0) begin
+				rat[rd_1] = free_p;
+				//update value in "free pool" (actually list of all free_pool)
+				free_pool[free_p] = 1'b1;
+				pd_1 = free_p;
+			end
+			
+			else begin
+				pd_1 = 0;
+			end
+			
+			$display("free_p = %d", free_p);
+
+			opcode_1_ = opcode_1;	// The signals we are passing and not changing
+			func3_1_ = func3_1;
+			func7_1_ = func7_1;
+			instr_1_ = instr_1;
 		
-		//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
-		ps1_1 = rat[rs1_1];
-		ps2_1 = rat[rs2_1];
+		/////////////// OK NOW DO IT AGAIN :) /////////////////////////
 		
-		//update RAT
-		if (rd_1 != 0) begin
-			rat[rd_1] = free_p;
-			//update value in "free pool" (actually list of all free_pool)
-			free_pool[free_p] = 1'b1;
-			pd_1 = free_p;
+			found_free = 0;
+			free_p = 0;
+			
+			for (n = 0; n < 64; n = n + 1) begin
+				if (free_pool[n] == 0 && found_free == 0) begin
+					found_free = 1;
+					free_p = n;
+				end
+			end
+			
+			//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
+			ps1_2 = rat[rs1_2];
+			ps2_2 = rat[rs2_2];
+			
+			//update RAT
+			if (rd_2 != 0) begin
+				rat[rd_2] = free_p;
+				//update value in "free pool" (actually list of all free_pool)
+				free_pool[free_p] = 1'b1;
+				pd_2 = free_p;
+			end
+			
+			else begin
+				pd_2 = 0;
+			end
+
+			opcode_2_ = opcode_2;	// The signals we are passing and not changing
+			func3_2_ = func3_2;
+			func7_2_ = func7_2;
+			instr_2_ = instr_2;
 		end
 		
 		else begin
+			opcode_1_ = 0;
+			func3_1_ = 0;
+			func7_1_ = 0;
+			ps1_1 = 0;		
+			ps2_1 = 0;
 			pd_1 = 0;
-		end
-		
-		$display("free_p = %d", free_p);
-
-		opcode_1_ = opcode_1;	// The signals we are passing and not changing
-		func3_1_ = func3_1;
-		func7_1_ = func7_1;
-		instr_1_ = instr_1;
-	
-	/////////////// OK NOW DO IT AGAIN :) /////////////////////////
-	
-		found_free = 0;
-		free_p = 0;
-		
-		for (n = 0; n < 64; n = n + 1) begin
-			if (free_pool[n] == 0 && found_free == 0) begin
-				found_free = 1;
-				free_p = n;
-			end
-		end
-		
-		//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
-		ps1_2 = rat[rs1_2];
-		ps2_2 = rat[rs2_2];
-		
-		//update RAT
-		if (rd_2 != 0) begin
-			rat[rd_2] = free_p;
-			//update value in "free pool" (actually list of all free_pool)
-			free_pool[free_p] = 1'b1;
-			pd_2 = free_p;
-		end
-		
-		else begin
+			instr_1_ = 0;
+			
+			opcode_2_ = 0;
+			func3_2_ = 0;
+			func7_2_ = 0;
+			ps1_2 = 0;		
+			ps2_2 = 0;
 			pd_2 = 0;
+			instr_2_ = 0;
 		end
-
-		opcode_2_ = opcode_2;	// The signals we are passing and not changing
-		func3_2_ = func3_2;
-		func7_2_ = func7_2;
-		instr_2_ = instr_2;
-	
+		
+		en_flag_o = en_flag_i;
+		
 	end
 	
 endmodule
