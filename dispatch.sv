@@ -1,9 +1,12 @@
 `timescale 1 ns / 1 ns 
 
-module dispatch(en_flag_i, opcode_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, opcode_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, en_flag_o);
+module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, 
+						opcode_2, func3_2, func7_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, en_flag_o);
 
 input en_flag_i;
 input [6:0] opcode_1;
+input [2:0] func3_1;
+input [6:0] func7_1;
 input [5:0] ps1_1;
 input [5:0] ps2_1;
 input [5:0] pd_1;
@@ -11,6 +14,8 @@ input [31:0] instr_1;
 output integer rs_line_1;
 
 input [6:0] opcode_2;
+input [2:0] func3_2;
+input [6:0] func7_2;
 input [5:0] ps1_2;
 input [5:0] ps2_2;
 input [5:0] pd_2;
@@ -41,7 +46,6 @@ always@(*) begin
 	$display("Dispatch enabled: %b", en_flag_i);
 	
 	if(en_flag_i == 1) begin
-		
 		rs_found = 0;
 		
 		for(num = 0; num < 16; num = num + 1) begin
@@ -51,13 +55,15 @@ always@(*) begin
 				$display("RS FOUND!!!!!!!");
 			end
 		end
-		
+
 		$display("line: %b",un);
 		
 		rs_line_1 = un; 
 		
 		rs[un].in_use = 1'b1;
 		rs[un].op = opcode_1;
+		rs[un].func3 = func3_1;
+		rs[un].func7 = func7_1;
 		rs[un].dest_reg = pd_1;
 		rs[un].src_reg_1 = ps1_1;
 		rs[un].src_reg_2 = ps2_1;
@@ -108,8 +114,7 @@ always@(*) begin
 				switch = 0;
 			end
 		end
-		
-		
+		/*
 		//grab index of first ROB unused
 		for(num = 0; num < 16; num = num + 1) begin
 			if (rob[num].v == 0 && rob_found == 0) begin
@@ -117,10 +122,8 @@ always@(*) begin
 				rob_found = 1;
 			end
 		end
-		
-		
-		//rs[un].rob_index = 0;
-		
+		*/
+		rs[un].rob_index = 0;
 		//Mark destination register as not ready
 		p_reg_R[pd_1] = 1'b0;
 		
@@ -148,6 +151,8 @@ always@(*) begin
 		
 		rs[un_2].in_use = 1;
 		rs[un_2].op = opcode_2;
+		rs[un_2].func3 = func3_2;
+		rs[un_2].func7 = func7_2;
 		rs[un_2].dest_reg = pd_2;
 		rs[un_2].src_reg_1 = ps1_2;
 		rs[un_2].src_reg_2 = ps2_1;
@@ -183,6 +188,8 @@ always@(*) begin
 				rs[un_2].src2_ready = 1'b0;
 			end
 		endcase
+		
+		
 			
 		//Mark destination register as not ready
 		p_reg_R[pd_2] = 0;
