@@ -39,6 +39,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
 	always begin
 		#10
+
 		clk = ~clk;
 	end
 
@@ -46,6 +47,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	import p::free_pool;
 	import p::p_reg_R;
 	import p::p_regs;
+	import p::rs;
 	
 	reg [7:0] mem[127:0];	// Instruction Memory
 	
@@ -105,6 +107,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [5:0] ps2_dii_1;
 	reg [5:0] pd_dii_1;
 	reg [31:0] instr_dii_1;
+	integer rs_line_dio_1;
 	reg [6:0] opcode_dio_1;
 	
 	reg [6:0] opcode_dii_2;
@@ -112,6 +115,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [5:0] ps2_dii_2;
 	reg [5:0] pd_dii_2;
 	reg [31:0] instr_dii_2;
+	integer rs_line_dio_2;
 	reg [6:0] opcode_dio_2;
 	
 	integer program_counter = 0;
@@ -133,6 +137,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
 		integer n;
 
+		for(n = 0; n < 16; n = n + 1) begin
+			rs[n].in_use = 0;
+		end 
+		
 		for(n = 0; n < 32; n = n + 1) begin
 			rat[n] = n;
 			free_pool[n] = 1;
@@ -150,9 +158,9 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			mem[n] = 0;
 		end
 
-		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
-		$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
-		$display("Mem: %p", mem);
+		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
+		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
+		//$display("Mem: %p", mem);
 		
 		ready = 1;
 		
@@ -165,7 +173,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			instr_2 <= {mem[program_counter+4],mem[program_counter+5],mem[program_counter+6],mem[program_counter+7]};
 			
 			if (instr_1 == 0) begin
-				$stop;	
+				$stop; //remember to put stop_flag instead of this that we send through the pipeline	
 			end
 			
 			$display("Instr: %b", instr_1);
@@ -207,6 +215,46 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		ps2_dii_2 <= ps2_ro_2;
 		pd_dii_2 <= pd_ro_2;
 		instr_dii_2 <= instr_ro_2;
+	end
+	
+	always @(posedge clk) begin
+		$display("In Use 1: %b", rs[rs_line_dio_1].in_use);
+		$display("Op 1: %b", rs[rs_line_dio_1].op);
+		$display("Dest Reg 1: %b", rs[rs_line_dio_1].dest_reg);
+		$display("Src 1 Reg 1: %b", rs[rs_line_dio_1].src_reg_1);
+		$display("Src 1 Data 1: %b", rs[rs_line_dio_1].src_data_1);
+		$display("Src 1 Ready 1: %b", rs[rs_line_dio_1].src1_ready);
+		$display("Src 2 Reg 1: %b", rs[rs_line_dio_1].src_reg_2);
+		$display("Src 2 Data 1: %b", rs[rs_line_dio_1].src_data_2);
+		$display("Src 2 Ready 1: %b", rs[rs_line_dio_1].src2_ready);
+		$display("FU Index 1: %b", rs[rs_line_dio_1].fu_index);
+		$display("ROB Index 1: %b", rs[rs_line_dio_1].rob_index);
+		
+		$display("In Use 2: %b", rs[rs_line_dio_1].in_use);
+		$display("Op 2: %b", rs[rs_line_dio_2].op);
+		$display("Dest Reg 2: %b", rs[rs_line_dio_2].dest_reg);
+		$display("Src 1 Reg 2: %b", rs[rs_line_dio_2].src_reg_1);
+		$display("Src 1 Data 2: %b", rs[rs_line_dio_2].src_data_1);
+		$display("Src 1 Ready 2: %b", rs[rs_line_dio_2].src1_ready);
+		$display("Src 2 Reg 2: %b", rs[rs_line_dio_2].src_reg_2);
+		$display("Src 2 Data 2: %b", rs[rs_line_dio_2].src_data_2);
+		$display("Src 2 Ready 2: %b", rs[rs_line_dio_2].src2_ready);
+		$display("FU Index 2: %b", rs[rs_line_dio_2].fu_index);
+		$display("ROB Index 2: %b", rs[rs_line_dio_2].rob_index);
+		
+		/*
+		reg in_use; //if the row is in use
+		reg[6:0] op;
+		reg[5:0] dest_reg;
+		reg[5:0] src_reg_1;
+		reg[31:0] src_data_1;
+		reg src1_ready;
+		reg[5:0] src_reg_2;
+		reg[31:0] src_data_2;
+		reg src2_ready;
+		reg [1:0] fu_index;
+		reg [3:0] rob_index;
+		*/
 	end
 	
 endmodule
