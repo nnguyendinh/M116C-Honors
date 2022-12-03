@@ -8,8 +8,10 @@ package p;
 		reg[6:0] op;
 		reg[5:0] dest_reg;
 		reg[5:0] src_reg_1;
+		reg[31:0] src_data_1;
 		reg src1_ready;
 		reg[5:0] src_reg_2;
+		reg[31:0] src_data_2;
 		reg src2_ready;
 		reg [1:0] fu_index;
 		reg [3:0] rob_index;
@@ -43,6 +45,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	import p::rat;
 	import p::free_pool;
 	import p::p_reg_R;
+	import p::p_regs;
 	
 	reg [7:0] mem[127:0];	// Instruction Memory
 	
@@ -134,11 +137,13 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			rat[n] = n;
 			free_pool[n] = 1;
 			p_reg_R[n] = 1;
+			p_regs[n] = 0;
 		end 
 
 		for(n = 32; n < 64; n = n + 1) begin
 			free_pool[n] = 0;
 			p_reg_R[n] = 1;
+			p_regs[n] = 0;
 		end
 	
 		for(n = 0; n < 128; n = n + 1) begin

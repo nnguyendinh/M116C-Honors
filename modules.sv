@@ -179,12 +179,14 @@ module ALU(instr, opcode, func3, func7, ps1, ps2, pd);
 	//based on op code, assign each variable
 	//ADD, SUB, ADDI, XOR, ANDI, SRA
 	
-	//ADD: 0000000 rs2 rs1 000 rd 0110011
-	//SUB: 0100000 rs2 rs1 000 rd 0110011
-	//ADDI: imm[11:0] rs1 000 rd 0010011
-	//XOR: 0000000 rs2 rs1 100 rd 0110011
-	//ANDI: imm[11:0] rs1 111 rd 0010011
-	//SRA: 0100000 rs2 rs1 101 rd 0110011
+	//ADD: 0000000 rs2 rs1 000 rd 			0110011
+	//SUB: 0100000 rs2 rs1 000 rd 			0110011
+	//ADDI: imm[11:0] rs1 000 rd 				0010011	immediate
+	//XOR: 0000000 rs2 rs1 100 rd 			0110011
+	//ANDI: imm[11:0] rs1 111 rd 				0010011	immediate
+	//SRA: 0100000 rs2 rs1 101 rd 			0110011	
+	//LW: imm[11;0] rs1 010 rd 				0000011	immediate
+	//SW: imm[11:5] rs2 rs1 010 imm[4:0] 	0100011	immediate
 	
 	input [31:0] instr;
 	input [6:0] opcode;
@@ -262,7 +264,7 @@ import p::rs;
 import p::p_reg_R;
 import p::rs_row;
 import p::rob;
-import p::free_pool;
+import p::p_regs;
 	
 integer un; //index of first unused
 integer un_2; //index of second unused
@@ -273,12 +275,13 @@ integer rs_found = 0;
 integer rob_found_2 = 0;
 integer rs_found_2 = 0;
 rs_row dum;
-
+	
+assign opcode_1_ = opcode_1;
+assign opcode_2_ = opcode_2;
 
 always@(*) begin
 	//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
 	//find first unused reservation station --> loop to find first unused every time?
-	
 	
 	for(num = 0; num < 16; num = num + 1) begin
 		if (rs[num].in_use == 0 && rs_found == 0) begin
@@ -293,20 +296,42 @@ always@(*) begin
 	dum.op = opcode_1;
 	dum.dest_reg = pd_1;
 	dum.src_reg_1 = ps1_1;
-	dum.src1_ready = p_reg_R[ps1_1];
 	dum.src_reg_2 = ps2_1;
-	dum.src2_ready = p_reg_R[ps2_1];
 	
+	//Set source 1 data if possible
+	case (opcode_1)
+		7'b0010011: begin	// ADDI & ANDI
+			dum.src_data_1 = p_regs[ps1_1];
+			dum.src1_ready = p_reg_R[ps1_1];
+		end
+		7'b0110011: begin	// ADD, SUB, XOR, SRA
+			dum.src_data_1 = p_regs[ps1_1];
+			dum.src1_ready = p_reg_R[ps1_1];
+		end
+		default: begin
+			dum.src_data_1 = 31'b0;
+			dum.src2_ready = 1'b0;
+		end
+	endcase
 	
-	
-	
-	//Mark destination register as not ready
-	
-	p_reg_R[pd_1] = 1'b0;
-	
+	//Set source 2 data/immediate if possible
+	case (opcode_1)
+		7'b0010011: begin	// ADDI & ANDI
+			dum.src_data_2 = {20'b0, instr_1[31:20]};
+			dum.src2_ready = 1'b1;
+		end
+		7'b0110011: begin	// ADD, SUB, XOR, SRA
+			dum.src_data_2 = p_regs[ps2_1];
+			dum.src2_ready = p_reg_R[ps2_1];
+		end
+		default: begin
+			dum.src_data_2 = 31'b0;
+			dum.src2_ready = 1'b0;
+		end
+	endcase
 	
 	//determine fu_index from opcode
-	if (opcode_1 == 7'b0100011 && opcode_1 == 7'b0000011) begin//if instr is LW or SW
+	if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is LW or SW
 		dum.fu_index = 2; //index 2 corresponds to FU 3 (mem only)
 	end
 	else begin
@@ -320,10 +345,7 @@ always@(*) begin
 		end
 	end
 	
-	
-	
 	//grab index of first ROB unused
-	
 	for(num = 0; num < 16; num = num + 1) begin
 		if (rob[num].v == 0 && rob_found == 0) begin
 			dum.rob_index = num;
@@ -331,11 +353,17 @@ always@(*) begin
 		end
 	end
 	
+	//Mark destination register as not ready
+	p_reg_R[pd_1] = 1'b0;
+	
+	// Update global reservation station
 	rs[un] = dum;
 	
 	
-	//second instruction in the cycle
+	/////////////// OK NOW DO IT AGAIN :) /////////////////////////
 	
+	
+	//second instruction in the cycle
 	for(num = 0; num < 16; num = num + 1) begin
 		if (rs[num].in_use == 0 && rs_found_2 == 0) begin
 			un_2 = num;
@@ -351,15 +379,45 @@ always@(*) begin
 	dum.op = opcode_2;
 	dum.dest_reg = pd_2;
 	dum.src_reg_1 = ps1_2;
-	dum.src1_ready = p_reg_R[ps1_2];
 	dum.src_reg_2 = ps2_1;
-	dum.src2_ready = p_reg_R[ps2_2];
+
+	//Set source 1 data if possible
+	case (opcode_1)
+		7'b0010011: begin	// ADDI & ANDI
+			dum.src_data_1 = p_regs[ps1_2];
+			dum.src1_ready = p_reg_R[ps1_2];
+		end
+		7'b0110011: begin	// ADD, SUB, XOR, SRA
+			dum.src_data_1 = p_regs[ps1_2];
+			dum.src1_ready = p_reg_R[ps1_2];
+		end
+		default: begin
+			dum.src_data_1 = 31'b0;
+			dum.src2_ready = 1'b0;
+		end
+	endcase
+	
+	//Set source 2 data/immediate if possible
+	case (opcode_1)
+		7'b0010011: begin	// ADDI & ANDI
+			dum.src_data_2 = {20'b0, instr_2[31:20]};
+			dum.src2_ready = 1'b1;
+		end
+		7'b0110011: begin	// ADD, SUB, XOR, SRA
+			dum.src_data_2 = p_regs[ps2_2];
+			dum.src2_ready = p_reg_R[ps2_2];
+		end
+		default: begin
+			dum.src_data_2 = 31'b0;
+			dum.src2_ready = 1'b0;
+		end
+	endcase
 		
 	//Mark destination register as not ready
 	p_reg_R[pd_2] = 0;
 	
 	//determine fu_index from opcode
-	if (opcode_2 == 7'b0100011 && opcode_2 == 7'b0000011) begin//if instr is LW or SW
+	if (opcode_2 == 7'b0100011 || opcode_2 == 7'b0000011) begin//if instr is LW or SW
 		dum.fu_index = 2; //index 2 corresponds to FU 3 (mem only)
 	end
 	else begin
@@ -383,13 +441,7 @@ always@(*) begin
 	end
 	
 	rs[un_2] = dum;
-	
-	//grab register values --> grab register values from the pointers into temp registers
 
-	
-	
-	opcode_1_ = opcode_1;
-	opcode_2_ = opcode_2;
 end
 
 endmodule
