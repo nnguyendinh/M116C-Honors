@@ -26,18 +26,21 @@ output reg en_flag_o;
 import p::rs;
 import p::p_reg_R;
 import p::rs_row;
+import p::rob_row;
 import p::rob;
 import p::p_regs;
 	
 integer un; //index of first unused
 integer un_2; //index of second unused
+integer rob_un;
+integer rob_un_2;
 integer switch = 0;
 integer num;
 integer rob_found = 0;
 integer rs_found = 0;
 integer rob_found_2 = 0;
 integer rs_found_2 = 0;
-	
+rob_row dum;	
 
 always@(*) begin
 	//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
@@ -114,16 +117,21 @@ always@(*) begin
 				switch = 0;
 			end
 		end
-		/*
+		
+		rob_found = 0;
+		
 		//grab index of first ROB unused
 		for(num = 0; num < 16; num = num + 1) begin
 			if (rob[num].v == 0 && rob_found == 0) begin
 				rs[un].rob_index = num;
+				rob_un = num;
 				rob_found = 1;
 			end
 		end
-		*/
-		rs[un].rob_index = 0;
+		
+		dum.v = 1'b1;
+		rob[rob_un] = dum;
+		
 		//Mark destination register as not ready
 		p_reg_R[pd_1] = 1'b0;
 		
@@ -211,12 +219,18 @@ always@(*) begin
 		
 		//grab index of first ROB unused
 		
+		rob_found_2 = 0;
+		
 		for(num = 0; num < 16; num = num + 1) begin
 			if (rob[num].v == 0 && rob_found_2 == 0) begin
 				rs[un_2].rob_index = num;
+				rob_un_2 = num;
 				rob_found_2 = 1;
 			end
 		end
+		
+		dum.v = 1'b1;
+		rob[rob_un_2] = dum;
 		
 
 		//$display("rs[un_2]: %b", rs[un_2].op);
