@@ -2,8 +2,9 @@
 
 module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, 
 						opcode_2, func3_2, func7_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, en_flag_o,
-						result_1, result_dest_1, result_valid_1, result_2, result_dest_2, result_valid_2,
-						result_3, result_dest_3, result_valid_3);
+						result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1,
+						result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2,
+						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3);
 
 	input en_flag_i;
 	input [6:0] opcode_1;
@@ -48,6 +49,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	output reg [31:0] result_2;
 	output reg [31:0] result_3;
 	
+	
 	output reg [5:0] result_dest_1;
 	output reg [5:0] result_dest_2;
 	output reg [5:0] result_dest_3;
@@ -55,7 +57,15 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	output reg result_valid_1;
 	output reg result_valid_2;
 	output reg result_valid_3;
-
+	
+	output reg [3:0] result_ROB_1; //ROB index of the instruction being fired
+	output reg [3:0] result_ROB_2;
+	output reg [3:0] result_ROB_3;
+	
+	output reg [1:0] result_FU_1; //FU index of instruction being fired
+	output reg [1:0] result_FU_2;
+	output reg [1:0] result_FU_3;
+	
 	import p::rs;
 	import p::p_reg_R;
 	import p::rs_row;
@@ -83,6 +93,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	ALU fu_1(ALU_opcode_1, ALU_func3_1, ALU_func7_1, ALU_source_1_1, ALU_source_2_1, result_dest_1, result_1);
 	ALU fu_2(ALU_opcode_2, ALU_func3_2, ALU_func7_2, ALU_source_1_2, ALU_source_2_2, result_dest_2, result_2);
 	ALU fu_3(ALU_opcode_3, ALU_func3_3, ALU_func7_3, ALU_source_1_3, ALU_source_2_3, result_dest_3, result_3);
+	
 	always@(*) begin
 		//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
 		//find first unused reservation station --> loop to find first unused every time?
@@ -135,6 +146,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					result_dest_1 = rs[num].dest_reg;
 					
 					result_valid_1 = 1;
+					result_ROB_1 = rs[num].rob_index;
+					result_FU_1 = rs[num].fu_index;
 					instr_found_1 = 1;
 					$display("INSTRUCTION 1 FIRED");
 					$display("%h + %h -> P_reg %b", ALU_source_1_1, ALU_source_2_1, result_dest_1);
@@ -159,6 +172,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					result_dest_2 = rs[num].dest_reg;
 					
 					result_valid_2 = 1;
+					result_ROB_2 = rs[num].rob_index;
+					result_FU_2 = rs[num].fu_index;
 					instr_found_2 = 1;
 					$display("INSTRUCTION 2 FIRED");
 					$display("%h + %h -> P_reg %b", ALU_source_1_2, ALU_source_2_2, result_dest_2);
@@ -183,6 +198,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					result_dest_3 = rs[num].dest_reg;
 					
 					result_valid_3 = 1;
+					result_ROB_3 = rs[num].rob_index;
+					result_FU_3 = rs[num].fu_index;
 					instr_found_3 = 1;
 					$display("INSTRUCTION 3 FIRED");
 					$display("%h + %h -> P_reg %b", ALU_source_1_3, ALU_source_2_3, result_dest_3);

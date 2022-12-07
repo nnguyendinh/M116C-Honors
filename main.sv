@@ -36,13 +36,13 @@ package p;
 	rs_row rs [16]; //reservation Station (16 rows)
 	reg p_reg_R[63:0]; //array of flags if p_reg is ready
 	rob_row rob [16]; //re-order buffer (16 rows)
-	reg FU_ready [2:0];
+	reg FU_ready [1:0];
 endpackage
 	
 
 module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, rd_do_2, ps1_ro_1, ps2_ro_1, pd_ro_1, ps1_ro_2, ps2_ro_2, pd_ro_2,
-				result_1, result_dest_1, result_valid_1, result_2, result_dest_2, result_valid_2,
-						result_3, result_dest_3, result_valid_3); 
+				result_d1, result_dest_d1, result_valid_d1, result_d2, result_dest_d2, result_valid_d2,
+						result_d3, result_dest_d3, result_valid_d3); 
 
 	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -140,17 +140,48 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [6:0] opcode_dio_2;
 	reg en_flag_dio;
 	
-	output reg [31:0] result_1;
-	output reg [5:0] result_dest_1;
-	output reg result_valid_1;
+	output reg [31:0] result_d1;
+	output reg [5:0] result_dest_d1;
+	output reg result_valid_d1;
+	reg [3:0] result_ROB_d1;
+	reg [1:0] result_FU_d1;
 	
-	output reg [31:0] result_2;
-	output reg [5:0] result_dest_2;
-	output reg result_valid_2;
+	output reg [31:0] result_d2;
+	output reg [5:0] result_dest_d2;
+	output reg result_valid_d2;
+	reg [3:0] result_ROB_d2;
+	reg [1:0] result_FU_d2;
 	
-	output reg [31:0] result_3;
-	output reg [5:0] result_dest_3;
-	output reg result_valid_3;
+	output reg [31:0] result_d3;
+	output reg [5:0] result_dest_d3;
+	output reg result_valid_d3;
+	reg [3:0] result_ROB_d3;
+	reg [1:0] result_FU_d3;
+	
+	//Complete stage Regs
+	
+	reg en_flag_ci;
+	
+	reg [31:0] result_c1;
+	reg [5:0] result_dest_c1;
+	reg result_valid_c1;
+	reg [3:0] result_ROB_c1;
+	reg [1:0] result_FU_c1;
+	
+	reg [31:0] result_c2;
+	reg [5:0] result_dest_c2;
+	reg result_valid_c2;
+	reg [3:0] result_ROB_c2;
+	reg [1:0] result_FU_c2;
+	
+	reg [31:0] result_c3;
+	reg [5:0] result_dest_c3;
+	reg result_valid_c3;
+	reg [3:0] result_ROB_c3;
+	reg [1:0] result_FU_c3;
+	
+	reg en_flag_co;
+	
 	
 	integer program_counter = 0;
 	integer ready = 0; //flag to start always block
@@ -166,11 +197,15 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	//Dispatch stage
 	dispatch disp(en_flag_dii, opcode_dii_1, func3_dii_1, func7_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, 
 						opcode_dii_2, func3_dii_2, func7_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, en_flag_dio,
-						result_1, result_dest_1, result_valid_1, result_2, result_dest_2, result_valid_2,
-						result_3, result_dest_3, result_valid_3);
+						result_d1, result_dest_d1, result_valid_d1, result_ROB_d1, result_FU_d1, 
+						result_d2, result_dest_d2, result_valid_d2, result_ROB_d2, result_FU_d2,
+						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3);
 	
 	//Complete stage
 	
+	complete comp(en_flag_ci, result_c1, result_dest_c1, result_valid_c1, result_ROB_c1, result_FU_c1, 
+									result_c2, result_dest_c2, result_valid_c2, result_ROB_c2, result_FU_c2,
+									result_c3, result_dest_c3, result_valid_c3, result_ROB_c3, result_FU_c3, en_flag_co);
 	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
@@ -178,7 +213,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
 		integer n;
 
-		for(n = 0; n < 3; n = n + 1) begin
+		for(n = 0; n < 2; n = n + 1) begin
 			FU_ready[n] = 1;
 		end 
 		
@@ -204,8 +239,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			mem[n] = 0;
 		end
 
-		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
-		$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
+		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
+		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
 		//$display("Mem: %p", mem);
 		
 		ready = 1;
@@ -281,6 +316,33 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		instr_dii_2 <= instr_ro_2;
 		
 	end
+	
+	
+	//Pipeline between dispatch/issue and complete
+	always @(posedge clk) begin
+	
+		en_flag_ci <= en_flag_dio;
+		
+		result_c1 <= result_d1;
+		result_dest_c1 <= result_dest_d1;
+		result_valid_c1 <= result_valid_d1;
+		result_ROB_c1 <= result_ROB_d1;
+		result_FU_c1 <= result_FU_d1;
+		
+		result_c2 <= result_d2;
+		result_dest_c2 <= result_dest_d2;
+		result_valid_c2 <= result_valid_d2;
+		result_ROB_c2 <= result_ROB_d2;
+		result_FU_c2 <= result_FU_d2;
+		
+		result_c3 <= result_d3;
+		result_dest_c3 <= result_dest_d3;
+		result_valid_c3 <= result_valid_d3;
+		result_ROB_c3 <= result_ROB_d3;
+		result_FU_c3 <= result_FU_d3;
+		
+	end
+	
 	
 	always @(posedge clk) begin
 		$display("RS ROB Index 1: %b", rs[rs_line_dio_1].rob_index);
