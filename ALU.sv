@@ -1,4 +1,4 @@
-module ALU(instr, opcode, func3, func7, source_1, source_2, pd, result, pd_);
+module ALU(opcode, func3, func7, source_1, source_2, pd, result);
 
 	//based on op code, assign each variable
 	//ADD, SUB, ADDI, XOR, ANDI, SRA
@@ -12,17 +12,13 @@ module ALU(instr, opcode, func3, func7, source_1, source_2, pd, result, pd_);
 	//LW: imm[11;0] rs1 010 rd 				0000011	immediate
 	//SW: imm[11:5] rs2 rs1 010 imm[4:0] 	0100011	immediate
 	
-	input [31:0] instr;
 	input [6:0] opcode;
 	input [2:0] func3;
 	input [6:0] func7;
 	input [31:0] source_1;
 	input [31:0] source_2;
 	input [5:0] pd;
-	output [31:0] result;
-	output [5:0] pd_;
-	
-	assign pd_ = pd;
+	output reg [31:0] result;
 
 	always@(*) begin
 	
