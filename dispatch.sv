@@ -40,7 +40,8 @@ integer rob_found = 0;
 integer rs_found = 0;
 integer rob_found_2 = 0;
 integer rs_found_2 = 0;
-rob_row dum;	
+rob_row dum;
+rob_row dum2;	
 
 always@(*) begin
 	//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
@@ -103,8 +104,9 @@ always@(*) begin
 			end
 		endcase
 		
+		
 		//determine fu_index from opcode
-		if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is LW or SW
+		if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is SW or LW
 			rs[un].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
 		end
 		else begin
@@ -118,18 +120,31 @@ always@(*) begin
 			end
 		end
 		
+		//Set up the ROB row corresponding to the instruction 
+		
 		rob_found = 0;
 		
-		//grab index of first ROB unused
+		//store in first unused ROB row
 		for(num = 0; num < 16; num = num + 1) begin
 			if (rob[num].v == 0 && rob_found == 0) begin
-				rs[un].rob_index = num;
+				rs[un].rob_index = num; //also correspond the ROB row to the RS row
 				rob_un = num;
 				rob_found = 1;
 			end
 		end
 		
 		dum.v = 1'b1;
+		
+		//let ROB know if writing to register or memory
+		if (opcode_1 == 7'b0100011) begin //if SW 
+			dum.instr_type = 1; //store to mem
+		end
+		else begin
+			dum.instr_type = 0;
+		end
+		
+		dum.phy_reg = pd_1;
+		
 		rob[rob_un] = dum;
 		
 		//Mark destination register as not ready
@@ -229,8 +244,19 @@ always@(*) begin
 			end
 		end
 		
-		dum.v = 1'b1;
-		rob[rob_un_2] = dum;
+		dum2.v = 1'b1;
+		
+		//let ROB know if writing to register or memory
+		if (opcode_1 == 7'b0100011) begin //if SW 
+			dum2.instr_type = 1; //store to mem
+		end
+		else begin
+			dum2.instr_type = 0;
+		end
+		
+		dum2.phy_reg = pd_2;
+		
+		rob[rob_un_2] = dum2;
 		
 
 		//$display("rs[un_2]: %b", rs[un_2].op);
