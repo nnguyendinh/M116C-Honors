@@ -44,6 +44,8 @@ if(en_flag_i == 1) begin
 		end
 	end
 	
+	//mark ROB row as complete
+	rob[rob_row].comp = 1;
 end
 
 else begin

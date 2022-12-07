@@ -27,6 +27,7 @@ package p;
 		reg [5:0] phy_reg; //index of destination phy reg (or dest. memory address)
 		reg[31:0] result; //result from ALU
 		reg[31:0] old_result; //old result of the dest. phy reg (if it exists at all)
+		reg comp; //0 if instruction is incomplete, 1 if instruction is complete
 	} rob_row;
 	
 	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
