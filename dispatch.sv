@@ -205,18 +205,15 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			case (opcode_1)
 				7'b0010011: begin	// ADDI & ANDI
 					rs[un].src_data_1 = p_regs[ps1_1];
-					//rs[un].src1_ready = p_reg_R[ps1_1]; TEMPORARY GARBAGE!!!!!!!!!!!!!!!!!!!!!!!
-					rs[un].src1_ready = 1'b1;
+					rs[un].src1_ready = p_reg_R[ps1_1];
 				end
 				7'b0110011: begin	// ADD, SUB, XOR, SRA
 					rs[un].src_data_1 = p_regs[ps1_1];
-					//rs[un].src1_ready = p_reg_R[ps1_1];
-					rs[un].src1_ready = 1'b1;
+					rs[un].src1_ready = p_reg_R[ps1_1];
 				end
 				default: begin
 					rs[un].src_data_1 = 31'b0;
-					//rs[un].src1_ready = 1'b0;
-					rs[un].src1_ready = 1'b1;
+					rs[un].src1_ready = 1'b0;
 					
 				end
 			endcase
@@ -229,13 +226,11 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				end
 				7'b0110011: begin	// ADD, SUB, XOR, SRA
 					rs[un].src_data_2 = p_regs[ps2_1];
-					//rs[un].src2_ready = p_reg_R[ps2_1];
-					rs[un].src2_ready = 1'b1;
+					rs[un].src2_ready = p_reg_R[ps2_1];
 				end
 				default: begin
 					rs[un].src_data_2 = 31'b0;
-					//rs[un].src2_ready = 1'b0;
-					rs[un].src1_ready = 1'b1;
+					rs[un].src2_ready = 1'b0;
 				end
 			endcase
 			
@@ -254,67 +249,66 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					switch = 0;
 				end
 			end
-		end
 		
-		//Set up the ROB row corresponding to the instruction 
-		
-		rob_found = 0;
-		
-		//store in first unused ROB row
-		for(num = 0; num < 16; num = num + 1) begin
-			if (rob[num].v == 0 && rob_found == 0) begin
-				rs[un].rob_index = num; //also correspond the ROB row to the RS row
-				rob_un = num;
-				rob_found = 1;
+			//Set up the ROB row corresponding to the instruction 
+			
+			rob_found = 0;
+			
+			//store in first unused ROB row
+			for(num = 0; num < 16; num = num + 1) begin
+				if (rob[num].v == 0 && rob_found == 0) begin
+					rs[un].rob_index = num; //also correspond the ROB row to the RS row
+					rob_un = num;
+					rob_found = 1;
+				end
 			end
-		end
-		
-		dum.v = 1'b1;
-		
-		//let ROB know if writing to register or memory
-		if (opcode_1 == 7'b0100011) begin //if SW 
-			dum.instr_type = 1; //store to mem
-		end
-		else begin
-			dum.instr_type = 0;
-		end
-		
-		dum.phy_reg = pd_1;
-		
-		rob[rob_un] = dum;
-		
-		//Mark destination register as not ready
-		p_reg_R[pd_1] = 1'b0;
-		
-		// Update global reservation station
-		//rs[un] = dum;
-		
+			
+			dum.v = 1'b1;
+			
+			//let ROB know if writing to register or memory
+			if (opcode_1 == 7'b0100011) begin //if SW 
+				dum.instr_type = 1; //store to mem
+			end
+			else begin
+				dum.instr_type = 0;
+			end
+			
+			dum.phy_reg = pd_1;
+			
+			rob[rob_un] = dum;
+			
+			//Mark destination register as not ready
+			p_reg_R[pd_1] = 1'b0;
+			
+			// Update global reservation station
+			//rs[un] = dum;
+			
 
-		//$display("rs[un] op: %b", rs[un].op);
-		
-		
-		/////////////// OK NOW DO IT AGAIN :) /////////////////////////
-		
-		rs_found_2 = 0;
-		
-		//second instruction in the cycle
-		for(num = 0; num < 16; num = num + 1) begin
-			if (rs[num].in_use == 0 && rs_found_2 == 0) begin
-				un_2 = num;
-				rs_found_2 = 1;
+			//$display("rs[un] op: %b", rs[un].op);
+			
+			
+			/////////////// OK NOW DO IT AGAIN :) /////////////////////////
+			
+			rs_found_2 = 0;
+			
+			//second instruction in the cycle
+			for(num = 0; num < 16; num = num + 1) begin
+				if (rs[num].in_use == 0 && rs_found_2 == 0) begin
+					un_2 = num;
+					rs_found_2 = 1;
+				end
 			end
-		end
-		
-		rs_line_2 = un_2; 
-		
-		
-		rs[un_2].in_use = 1;
-		rs[un_2].op = opcode_2;
-		rs[un_2].func3 = func3_2;
-		rs[un_2].func7 = func7_2;
-		rs[un_2].dest_reg = pd_2;
-		rs[un_2].src_reg_1 = ps1_2;
-		rs[un_2].src_reg_2 = ps2_1;
+			
+			rs_line_2 = un_2; 
+			
+			
+			rs[un_2].in_use = 1;
+			rs[un_2].op = opcode_2;
+			rs[un_2].func3 = func3_2;
+			rs[un_2].func7 = func7_2;
+			rs[un_2].dest_reg = pd_2;
+			rs[un_2].src_reg_1 = ps1_2;
+			rs[un_2].src_reg_2 = ps2_1;
 
 			//Set source 1 data if possible
 			case (opcode_1)
@@ -331,7 +325,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					rs[un_2].src2_ready = 1'b0;
 				end
 			endcase
-			
+				
 			//Set source 2 data/immediate if possible
 			case (opcode_1)
 				7'b0010011: begin	// ADDI & ANDI
@@ -347,7 +341,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					rs[un_2].src2_ready = 1'b0;
 				end
 			endcase
-				
+					
 			//Mark destination register as not ready
 			p_reg_R[pd_2] = 0;
 			
@@ -365,40 +359,39 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					switch = 0;
 				end
 			end
-		end
-		
-		//grab index of first ROB unused
-		
-		rob_found_2 = 0;
-		
-		for(num = 0; num < 16; num = num + 1) begin
-			if (rob[num].v == 0 && rob_found_2 == 0) begin
-				rs[un_2].rob_index = num;
-				rob_un_2 = num;
-				rob_found_2 = 1;
+			
+			//grab index of first ROB unused
+			
+			rob_found_2 = 0;
+			
+			for(num = 0; num < 16; num = num + 1) begin
+				if (rob[num].v == 0 && rob_found_2 == 0) begin
+					rs[un_2].rob_index = num;
+					rob_un_2 = num;
+					rob_found_2 = 1;
+				end
+
 			end
+			
+			dum2.v = 1'b1;
+			
+			//let ROB know if writing to register or memory
+			if (opcode_1 == 7'b0100011) begin //if SW 
+				dum2.instr_type = 1; //store to mem
+			end
+			else begin
+				dum2.instr_type = 0;
+			end
+			
+			dum2.phy_reg = pd_2;
+			
+			rob[rob_un_2] = dum2;
+			
+
+			//$display("rs[un_2]: %b", rs[un_2].op);
 
 		end
-		else if (en_flag_i == 0) begin
 		
-		dum2.v = 1'b1;
-		
-		//let ROB know if writing to register or memory
-		if (opcode_1 == 7'b0100011) begin //if SW 
-			dum2.instr_type = 1; //store to mem
-		end
-		else begin
-			dum2.instr_type = 0;
-		end
-		
-		dum2.phy_reg = pd_2;
-		
-		rob[rob_un_2] = dum2;
-		
-
-		//$display("rs[un_2]: %b", rs[un_2].op);
-
-	end
 	else if (en_flag_i == 0) begin
 	
 		$stop;
