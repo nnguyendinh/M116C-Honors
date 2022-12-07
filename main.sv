@@ -20,10 +20,14 @@ package p;
 	} rs_row;
 
 	typedef struct packed {
-		reg v;
-		reg[5:0] dest_reg;
-		reg[5:0] old_dest_reg;
-		reg[31:0] pc;
+		reg v; //know if ROB row is in use
+		//so you know if store to memory or store to register
+		reg instr_type; //not necessarily opcode, just need to know if store to memory or register
+		// 0 --> store to register, 1 --> store to memory
+		reg [5:0] phy_reg; //index of destination phy reg (or dest. memory address)
+		reg[31:0] result; //result from ALU
+		reg[31:0] old_result; //old result of the dest. phy reg (if it exists at all)
+		reg comp; //0 if instruction is incomplete, 1 if instruction is complete
 	} rob_row;
 	
 	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
@@ -165,6 +169,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						result_1, result_dest_1, result_valid_1, result_2, result_dest_2, result_valid_2,
 						result_3, result_dest_3, result_valid_3);
 	
+	//Complete stage
+	
+	
+	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
 		//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
@@ -275,7 +283,20 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	end
 	
 	always @(posedge clk) begin
-	
+		$display("RS ROB Index 1: %b", rs[rs_line_dio_1].rob_index);
+		$display("RS Dest Reg 1: %b", rs[rs_line_dio_1].dest_reg);
+		$display("ROB in use 1: %b", rob[rs_line_dio_1].v);
+		$display("ROB instr_type 1: %b", rob[rs_line_dio_1].instr_type);
+		$display("ROB phy reg 1: %b", rob[rs_line_dio_1].phy_reg);
+		
+		$display("RS ROB Index 2: %b", rs[rs_line_dio_2].rob_index);
+		$display("RS Dest Reg 2: %b", rs[rs_line_dio_2].dest_reg);
+		$display("ROB in use 2: %b", rob[rs_line_dio_2].v);
+		$display("ROB instr_type 2: %b", rob[rs_line_dio_2].instr_type);
+		$display("ROB phy reg 2: %b", rob[rs_line_dio_2].phy_reg);
+
+
+		/*
 		$display("In Use 1: %b", rs[rs_line_dio_1].in_use);
 		$display("Op 1: %b", rs[rs_line_dio_1].op);
 		$display("Func3 1: %b", rs[rs_line_dio_1].func3);
@@ -289,7 +310,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		$display("Src 2 Ready 1: %b", rs[rs_line_dio_1].src2_ready);
 		$display("FU Index 1: %b", rs[rs_line_dio_1].fu_index);
 		$display("ROB Index 1: %b", rs[rs_line_dio_1].rob_index);
-		
+
 		$display("In Use 2: %b", rs[rs_line_dio_1].in_use);
 		$display("Op 2: %b", rs[rs_line_dio_2].op);
 		$display("Func3 2: %b", rs[rs_line_dio_2].func3);
@@ -303,19 +324,6 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		$display("Src 2 Ready 2: %b", rs[rs_line_dio_2].src2_ready);
 		$display("FU Index 2: %b", rs[rs_line_dio_2].fu_index);
 		$display("ROB Index 2: %b", rs[rs_line_dio_2].rob_index);
-		
-		/*
-		reg in_use; //if the row is in use
-		reg[6:0] op;
-		reg[5:0] dest_reg;
-		reg[5:0] src_reg_1;
-		reg[31:0] src_data_1;
-		reg src1_ready;
-		reg[5:0] src_reg_2;
-		reg[31:0] src_data_2;
-		reg src2_ready;
-		reg [1:0] fu_index;
-		reg [3:0] rob_index;
 		*/
 	end
 	

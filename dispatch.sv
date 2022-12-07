@@ -59,12 +59,15 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	import p::rs;
 	import p::p_reg_R;
 	import p::rs_row;
+	import p::rob_row;
 	import p::rob;
 	import p::p_regs;
 	import p::FU_ready;
 		
 	reg [4:0] un; //index of first unused
 	reg [4:0] un_2; //index of second unused
+	integer rob_un;
+	integer rob_un_2;
 	reg switch = 0;
 	integer num;
 	reg rob_found = 0;
@@ -74,11 +77,12 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	reg instr_found_1 = 0;
 	reg instr_found_2 = 0;
 	reg instr_found_3 = 0;
-		
+	rob_row dum;
+	rob_row dum2;	
+
 	ALU fu_1(ALU_opcode_1, ALU_func3_1, ALU_func7_1, ALU_source_1_1, ALU_source_2_1, result_dest_1, result_1);
 	ALU fu_2(ALU_opcode_2, ALU_func3_2, ALU_func7_2, ALU_source_1_2, ALU_source_2_2, result_dest_2, result_2);
 	ALU fu_3(ALU_opcode_3, ALU_func3_3, ALU_func7_3, ALU_source_1_3, ALU_source_2_3, result_dest_3, result_3);
-
 	always@(*) begin
 		//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
 		//find first unused reservation station --> loop to find first unused every time?
@@ -235,8 +239,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				end
 			endcase
 			
-			//determine fu_index from opcode
-			if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is LW or SW
+			
+		//determine fu_index from opcode
+			if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is SW or LW
 				rs[un].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
 			end
 			else begin
@@ -249,35 +254,67 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					switch = 0;
 				end
 			end
-			/*
-			//grab index of first ROB unused
-			for(num = 0; num < 16; num = num + 1) begin
-				if (rob[num].v == 0 && rob_found == 0) begin
-					rs[un].rob_index = num;
-					rob_found = 1;
-				end
+		end
+		
+		//Set up the ROB row corresponding to the instruction 
+		
+		rob_found = 0;
+		
+		//store in first unused ROB row
+		for(num = 0; num < 16; num = num + 1) begin
+			if (rob[num].v == 0 && rob_found == 0) begin
+				rs[un].rob_index = num; //also correspond the ROB row to the RS row
+				rob_un = num;
+				rob_found = 1;
 			end
-			*/
-			rs[un].rob_index = 0;
-			//Mark destination register as not ready
-			p_reg_R[pd_1] = 1'b0;	
+		end
+		
+		dum.v = 1'b1;
+		
+		//let ROB know if writing to register or memory
+		if (opcode_1 == 7'b0100011) begin //if SW 
+			dum.instr_type = 1; //store to mem
+		end
+		else begin
+			dum.instr_type = 0;
+		end
+		
+		dum.phy_reg = pd_1;
+		
+		rob[rob_un] = dum;
+		
+		//Mark destination register as not ready
+		p_reg_R[pd_1] = 1'b0;
+		
+		// Update global reservation station
+		//rs[un] = dum;
+		
 
-			//$display("rs[un] op: %b", rs[un].op);
-			
-			
-			/////////////// OK NOW DO IT AGAIN :) /////////////////////////
-			
-			// Moved finding the empty RS row (un_2) to the top to not interfere with issue/fire
-			
-			rs_line_2 = un_2; 
-			
-			rs[un_2].in_use = 1;
-			rs[un_2].op = opcode_2;
-			rs[un_2].func3 = func3_2;
-			rs[un_2].func7 = func7_2;
-			rs[un_2].dest_reg = pd_2;
-			rs[un_2].src_reg_1 = ps1_2;
-			rs[un_2].src_reg_2 = ps2_1;
+		//$display("rs[un] op: %b", rs[un].op);
+		
+		
+		/////////////// OK NOW DO IT AGAIN :) /////////////////////////
+		
+		rs_found_2 = 0;
+		
+		//second instruction in the cycle
+		for(num = 0; num < 16; num = num + 1) begin
+			if (rs[num].in_use == 0 && rs_found_2 == 0) begin
+				un_2 = num;
+				rs_found_2 = 1;
+			end
+		end
+		
+		rs_line_2 = un_2; 
+		
+		
+		rs[un_2].in_use = 1;
+		rs[un_2].op = opcode_2;
+		rs[un_2].func3 = func3_2;
+		rs[un_2].func7 = func7_2;
+		rs[un_2].dest_reg = pd_2;
+		rs[un_2].src_reg_1 = ps1_2;
+		rs[un_2].src_reg_2 = ps2_1;
 
 			//Set source 1 data if possible
 			case (opcode_1)
@@ -328,30 +365,53 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					switch = 0;
 				end
 			end
-			
-			//grab index of first ROB unused
-			
-			for(num = 0; num < 16; num = num + 1) begin
-				if (rob[num].v == 0 && rob_found_2 == 0) begin
-					rs[un_2].rob_index = num;
-					rob_found_2 = 1;
-				end
+		end
+		
+		//grab index of first ROB unused
+		
+		rob_found_2 = 0;
+		
+		for(num = 0; num < 16; num = num + 1) begin
+			if (rob[num].v == 0 && rob_found_2 == 0) begin
+				rs[un_2].rob_index = num;
+				rob_un_2 = num;
+				rob_found_2 = 1;
 			end
 
 		end
 		else if (en_flag_i == 0) begin
 		
-			$stop;
-			
-		end
+		dum2.v = 1'b1;
 		
+		//let ROB know if writing to register or memory
+		if (opcode_1 == 7'b0100011) begin //if SW 
+			dum2.instr_type = 1; //store to mem
+		end
 		else begin
-			rs_line_1 = 0;
-			rs_line_2 = 0;
+			dum2.instr_type = 0;
 		end
 		
+		dum2.phy_reg = pd_2;
 		
-		en_flag_o = en_flag_i;
+		rob[rob_un_2] = dum2;
+		
+
+		//$display("rs[un_2]: %b", rs[un_2].op);
+
 	end
+	else if (en_flag_i == 0) begin
+	
+		$stop;
+		
+	end
+	
+	else begin
+		rs_line_1 = 0;
+		rs_line_2 = 0;
+	end
+	
+	
+	en_flag_o = en_flag_i;
+end
 
 endmodule
