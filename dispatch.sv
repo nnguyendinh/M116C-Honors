@@ -104,7 +104,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	reg switch = 0;
 	integer num;
 	reg rob_found = 0;
-	reg rs_found = 0;
+	reg [1:0] rs_found = 0;
 	reg rob_found_2 = 0;
 	reg rs_found_2 = 0;
 	reg instr_found_1 = 0;
@@ -181,24 +181,20 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			//Actual Dispatch/fire stuff////////////////////////////////////////
 			rs_found = 0;
 			
-			// Find first unused row in the RS
+			// Find first two unused rows in the RS
 			for(num = 0; num < 16; num = num + 1) begin
+				
 				if (rs[num].in_use == 0 && rs_found == 0) begin
 					un = num;
-					rs[un].in_use = 1'b1;
+					$display("found un: %d, rs_f: %b", num, rs_found);
 					rs_found = 1;
 				end
-			end
-			
-			rs_found_2 = 0;
-			
-			// Find second unused row in the RS
-			for(num = 0; num < 16; num = num + 1) begin
-				if (rs[num].in_use == 0 && rs_found_2 == 0 && num != un) begin
+				else if (rs[num].in_use == 0 && rs_found == 1) begin
 					un_2 = num;
-					rs[un_2].in_use = 1'b1;
-					rs_found_2 = 1;
+					$display("found un_2: %d, rs_f: %b", num, rs_found);
+					rs_found = 2;
 				end
+				
 			end
 			
 			$display("1st RS line found: %d",un);
@@ -217,8 +213,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
 						&& instr_found_1 == 0) begin
 						
-					
-					rs[num].in_use = 0;
+					//clear the whole row
+					rs[num] = 0;
 					
 					ALU_opcode_1 = rs[num].op;
 					ALU_func3_1 = rs[num].func3;
@@ -247,7 +243,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
 						&& instr_found_2 == 0) begin
 						
-					rs[num].in_use = 0;
+					rs[num] = 0;
 					
 					ALU_opcode_2 = rs[num].op;
 					ALU_func3_2 = rs[num].func3;
@@ -273,7 +269,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
 						&& instr_found_3 == 0) begin
 						
-					rs[num].in_use = 0;
+					rs[num] = 0;
 					
 					ALU_opcode_3 = rs[num].op;
 					ALU_func3_3 = rs[num].func3;
@@ -295,6 +291,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			
 			rs_line_1 = un; 
 			
+			rs[un].in_use = 1'b1;
 			rs[un].op = opcode_1;
 			rs[un].func3 = func3_1;
 			rs[un].func7 = func7_1;
@@ -368,7 +365,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			
 			rs_line_2 = un_2; 
 			
-			
+			rs[un_2].in_use = 1'b1;
 			rs[un_2].op = opcode_2;
 			rs[un_2].func3 = func3_2;
 			rs[un_2].func7 = func7_2;
