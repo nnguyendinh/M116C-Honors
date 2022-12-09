@@ -1,7 +1,14 @@
 `timescale 1 ns / 1 ns 
 
 module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_, func3_1_, func7_1_, ps1_1, ps2_1, pd_1, instr_1_,
-					opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2, opcode_2_, func3_2_, func7_2_, ps1_2, ps2_2, pd_2, instr_2_, en_flag_o);
+					opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2, opcode_2_, func3_2_, func7_2_, ps1_2, ps2_2, pd_2, instr_2_, en_flag_o, 
+					old_pd_1, old_pd_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2);
+	
+	import p::rat;
+	
+	reg free_pool[63:0]; //free pool, each index represents the physical register with the corresponding number
+	//0 = not attached to an arch reg, 1 = attached to an arch reg
+	
 	input en_flag_i;
 	input [6:0] opcode_1;
 	input [2:0] func3_1;
@@ -32,14 +39,32 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 	output reg [5:0] ps2_2;
 	output reg [5:0] pd_2;
 	output reg [31:0] instr_2_;
+	
+	output reg [5:0] old_pd_1;
+	output reg [5:0] old_pd_2;
+	
+	input rt_flag_1;
+	input [5:0] fp_i_1;
+	input rt_flag_2;
+	input [5:0] fp_i_2;
+	
 	output reg en_flag_o;
 	
 	integer n;
 	integer found_free;
 	integer free_p;
 	
-	import p::rat;
-	import p::free_pool;
+	initial begin
+	
+			for(n = 0; n < 32; n = n + 1) begin
+				free_pool[n] = 1;
+			end 
+
+			for(n = 32; n < 64; n = n + 1) begin
+				free_pool[n] = 0;
+			end
+	
+	end
 	
 	always@(*) begin
 	
@@ -47,6 +72,17 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 		
 		if(en_flag_i == 1) begin
 			
+			//Updates from Retire stage
+			if(rt_flag_1 == 1) begin
+				free_pool[fp_i_1] = 1;
+			end
+			
+			if(rt_flag_2 == 1) begin
+				free_pool[fp_i_2] = 1;
+			end
+			
+			
+			//Rename stuff////////////////////////////////////////////////////
 			found_free = 0;
 			free_p = 0;
 			
@@ -63,6 +99,7 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 			
 			//update RAT
 			if (rd_1 != 0) begin
+				old_pd_1 = rat[rd_1];
 				rat[rd_1] = free_p;
 				//update value in "free pool" (actually list of all free_pool)
 				free_pool[free_p] = 1'b1;
@@ -98,6 +135,7 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 			
 			//update RAT
 			if (rd_2 != 0) begin
+				old_pd_2 = rat[rd_2];
 				rat[rd_2] = free_p;
 				//update value in "free pool" (actually list of all free_pool)
 				free_pool[free_p] = 1'b1;
@@ -130,6 +168,15 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 			ps2_2 = 0;
 			pd_2 = 0;
 			instr_2_ = 0;
+			
+			for(n = 0; n < 32; n = n + 1) begin
+				free_pool[n] = 1;
+			end 
+
+			for(n = 32; n < 64; n = n + 1) begin
+				free_pool[n] = 0;
+			end
+			
 		end
 		
 		en_flag_o = en_flag_i;

@@ -4,8 +4,19 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						opcode_2, func3_2, func7_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, en_flag_o,
 						result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1,
 						result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2,
-						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3);
+						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, 
+						rob_p_1, rob_op_1, rob_p_2, rob_op_2,
+						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
+						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2);
 
+	//import p::p_reg_R;
+	import p::rs_row;
+	import p::rob_row;
+	import p::p_regs;
+	
+	rs_row rs [16]; //reservation station
+	reg p_reg_R[63:0]; //Table for determining if physical register is ready or not
+	
 	input en_flag_i;
 	input [6:0] opcode_1;
 	input [2:0] func3_1;
@@ -66,13 +77,25 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	output reg [1:0] result_FU_2;
 	output reg [1:0] result_FU_3;
 	
-	import p::rs;
-	import p::p_reg_R;
-	import p::rs_row;
-	import p::rob_row;
-	import p::rob;
-	import p::p_regs;
-	import p::FU_ready;
+	input [5:0] o_pd_1;
+	input [5:0] o_pd_2;
+	output reg [5:0] rob_p_1;
+	output reg [6:0] rob_op_1;
+	output reg [5:0] rob_p_2;
+	output reg [6:0] rob_op_2;
+	output reg [5:0] o_rob_p_1;
+	output reg [5:0] o_rob_p_2;
+	
+	input f_flag_1;
+	input [5:0] dest_r_1;
+	input [31:0] f_data_1;
+	input f_flag_2;
+	input [5:0] dest_r_2;
+	input [31:0] f_data_2;
+	input f_flag_3;
+	input [5:0] dest_r_3;
+	input [31:0] f_data_3;
+	
 		
 	reg [4:0] un; //index of first unused
 	reg [4:0] un_2; //index of second unused
@@ -102,12 +125,67 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		
 		if(en_flag_i == 1) begin
 			
+			//Update p_reg_R from complete stage
+			if(f_flag_1 == 1) begin
+				p_reg_R[dest_r_1] = 1;
+				
+				//Update source registers from data forwarded from complete stage
+				for(integer n = 0; n < 16; n = n + 1) begin
+					if (rs[n].src_reg_1 == dest_r_1) begin
+						rs[n].src_data_1 = f_data_1;
+						rs[n].src1_ready = 1;
+					end
+					
+					if (rs[n].src_reg_2 == dest_r_1) begin
+						rs[n].src_data_2 = f_data_1;
+						rs[n].src2_ready = 1;
+					end
+				end
+				
+			end
+		
+			if(f_flag_2 == 1) begin
+				p_reg_R[dest_r_2] = 1;
+				
+				for(integer n = 0; n < 16; n = n + 1) begin
+					if (rs[n].src_reg_1 == dest_r_2) begin
+						rs[n].src_data_1 = f_data_2;
+						rs[n].src1_ready = 1;
+					end
+					
+					if (rs[n].src_reg_2 == dest_r_2) begin
+						rs[n].src_data_2 = f_data_2;
+						rs[n].src2_ready = 1;
+					end
+				end
+			end 
+			
+			if(f_flag_3 == 1) begin
+				p_reg_R[dest_r_3] = 1;
+				
+				for(integer n = 0; n < 16; n = n + 1) begin
+					if (rs[n].src_reg_1 == dest_r_3) begin
+						rs[n].src_data_1 = f_data_3;
+						rs[n].src1_ready = 1;
+					end
+					
+					if (rs[n].src_reg_2 == dest_r_3) begin
+						rs[n].src_data_2 = f_data_3;
+						rs[n].src2_ready = 1;
+					end
+				end
+			end 
+			
+
+			
+			//Actual Dispatch/fire stuff////////////////////////////////////////
 			rs_found = 0;
 			
 			// Find first unused row in the RS
 			for(num = 0; num < 16; num = num + 1) begin
 				if (rs[num].in_use == 0 && rs_found == 0) begin
 					un = num;
+					rs[un].in_use = 1'b1;
 					rs_found = 1;
 				end
 			end
@@ -118,9 +196,13 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			for(num = 0; num < 16; num = num + 1) begin
 				if (rs[num].in_use == 0 && rs_found_2 == 0 && num != un) begin
 					un_2 = num;
+					rs[un_2].in_use = 1'b1;
 					rs_found_2 = 1;
 				end
 			end
+			
+			$display("1st RS line found: %d",un);
+			$display("2nd RS line found: %d",un_2);
 			
 			// Issue/Fire Stage
 			
@@ -133,8 +215,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			for(num = 0; num < 16; num = num + 1) begin
 			
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-						&& FU_ready[rs[num].fu_index] == 1 && instr_found_1 == 0) begin
+						&& instr_found_1 == 0) begin
 						
+					
 					rs[num].in_use = 0;
 					
 					ALU_opcode_1 = rs[num].op;
@@ -148,18 +231,21 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					result_valid_1 = 1;
 					result_ROB_1 = rs[num].rob_index;
 					result_FU_1 = rs[num].fu_index;
+					
 					instr_found_1 = 1;
 					$display("INSTRUCTION 1 FIRED");
 					$display("%h + %h -> P_reg %b", ALU_source_1_1, ALU_source_2_1, result_dest_1);
+					
 				end
 			end
+			
 			
 			// Fire second instruction
 			instr_found_2 = 0;
 			for(num = 0; num < 16; num = num + 1) begin
 			
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-						&& FU_ready[rs[num].fu_index] == 1 && instr_found_2 == 0) begin
+						&& instr_found_2 == 0) begin
 						
 					rs[num].in_use = 0;
 					
@@ -185,7 +271,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			for(num = 0; num < 16; num = num + 1) begin
 			
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-						&& FU_ready[rs[num].fu_index] == 1 && instr_found_3 == 0) begin
+						&& instr_found_3 == 0) begin
 						
 					rs[num].in_use = 0;
 					
@@ -206,11 +292,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				end
 			end
 
-			$display("line: %b",un);
 			
 			rs_line_1 = un; 
 			
-			rs[un].in_use = 1'b1;
 			rs[un].op = opcode_1;
 			rs[un].func3 = func3_1;
 			rs[un].func7 = func7_1;
@@ -268,58 +352,23 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			end
 		
 			//Set up the ROB row corresponding to the instruction 
-			
-			rob_found = 0;
-			
-			//store in first unused ROB row
-			for(num = 0; num < 16; num = num + 1) begin
-				if (rob[num].v == 0 && rob_found == 0) begin
-					rs[un].rob_index = num; //also correspond the ROB row to the RS row
-					rob_un = num;
-					rob_found = 1;
-				end
-			end
-			
-			dum.v = 1'b1;
-			
-			//let ROB know if writing to register or memory
-			if (opcode_1 == 7'b0100011) begin //if SW 
-				dum.instr_type = 1; //store to mem
-			end
-			else begin
-				dum.instr_type = 0;
-			end
-			
-			dum.phy_reg = pd_1;
-			
-			rob[rob_un] = dum;
+			rob_p_1 = pd_1;
+			rob_op_1 = opcode_1;
+			o_rob_p_1 = o_pd_1;
 			
 			//Mark destination register as not ready
 			p_reg_R[pd_1] = 1'b0;
 			
-			// Update global reservation station
-			//rs[un] = dum;
-			
 
-			//$display("rs[un] op: %b", rs[un].op);
+			
 			
 			
 			/////////////// OK NOW DO IT AGAIN :) /////////////////////////
 			
-			rs_found_2 = 0;
-			
-			//second instruction in the cycle
-			for(num = 0; num < 16; num = num + 1) begin
-				if (rs[num].in_use == 0 && rs_found_2 == 0) begin
-					un_2 = num;
-					rs_found_2 = 1;
-				end
-			end
 			
 			rs_line_2 = un_2; 
 			
 			
-			rs[un_2].in_use = 1;
 			rs[un_2].op = opcode_2;
 			rs[un_2].func3 = func3_2;
 			rs[un_2].func7 = func7_2;
@@ -359,8 +408,6 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				end
 			endcase
 					
-			//Mark destination register as not ready
-			p_reg_R[pd_2] = 0;
 			
 			//determine fu_index from opcode
 			if (opcode_2 == 7'b0100011 || opcode_2 == 7'b0000011) begin//if instr is LW or SW
@@ -377,47 +424,39 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				end
 			end
 			
-			//grab index of first ROB unused
 			
-			rob_found_2 = 0;
 			
-			for(num = 0; num < 16; num = num + 1) begin
-				if (rob[num].v == 0 && rob_found_2 == 0) begin
-					rs[un_2].rob_index = num;
-					rob_un_2 = num;
-					rob_found_2 = 1;
-				end
+			//ROB stuff
+			rob_p_2 = pd_2;
+			rob_op_2 = opcode_2;
+			o_rob_p_2 = o_pd_2;
+			
+			//Mark destination register as not ready
+			p_reg_R[pd_2] = 0;
 
+			
+			//Display entire reservation station
+			for(integer n = 0; n < 16; n = n + 1) begin
+				$display("RS Line %d: %b, %b, %b, %b, %d, %d, %d, %d, %d, %d, %d, %b, %b", n, rs[n].in_use, 
+						rs[n].op, rs[n].func3, rs[n].func7, rs[n].dest_reg, rs[n].src_reg_1,
+						rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
+						rs[n].src2_ready, rs[n].fu_index, rs[n].rob_index);
 			end
 			
-			dum2.v = 1'b1;
-			
-			//let ROB know if writing to register or memory
-			if (opcode_1 == 7'b0100011) begin //if SW 
-				dum2.instr_type = 1; //store to mem
-			end
-			else begin
-				dum2.instr_type = 0;
-			end
-			
-			dum2.phy_reg = pd_2;
-			
-			rob[rob_un_2] = dum2;
-			
-
-			//$display("rs[un_2]: %b", rs[un_2].op);
-
 		end
-		
-	else if (en_flag_i == 0) begin
-	
-		$stop;
-		
-	end
-	
 	else begin
 		rs_line_1 = 0;
 		rs_line_2 = 0;
+		
+		//before enable flag is sent thru, initialize reservation station
+		for(integer n = 0; n < 16; n = n + 1) begin
+			rs[n].in_use = 0;
+		end 
+		
+		for(integer n = 0; n < 64; n = n + 1) begin
+			p_reg_R[n] = 1;
+		end 
+		
 	end
 	
 	

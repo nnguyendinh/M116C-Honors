@@ -26,23 +26,23 @@ package p;
 		// 0 --> store to register, 1 --> store to memory
 		reg [5:0] phy_reg; //index of destination phy reg (or dest. memory address)
 		reg[31:0] result; //result from ALU
+		reg[31:0] old_phy; //old phy reg
 		reg[31:0] old_result; //old result of the dest. phy reg (if it exists at all)
 		reg comp; //0 if instruction is incomplete, 1 if instruction is complete
 	} rob_row;
 	
 	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
-	reg free_pool[63:0]; //kind-of free pool --> contains value that each phy reg points to, and a beginning flag for if there is a current value attached to the phy reg
 	reg [31:0] p_regs[63:0]; //data that physical regs contain
-	rs_row rs [16]; //reservation Station (16 rows)
-	reg p_reg_R[63:0]; //array of flags if p_reg is ready
-	rob_row rob [16]; //re-order buffer (16 rows)
-	reg FU_ready [1:0];
+	//rs_row rs [16]; //reservation Station (16 rows)
+	//reg p_reg_R[63:0]; //array of flags if p_reg is ready
+	//rob_row rob [16]; //re-order buffer (16 rows)
 endpackage
 	
 
 module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, rd_do_2, ps1_ro_1, ps2_ro_1, pd_ro_1, ps1_ro_2, ps2_ro_2, pd_ro_2,
 				result_d1, result_dest_d1, result_valid_d1, result_d2, result_dest_d2, result_valid_d2,
-						result_d3, result_dest_d3, result_valid_d3); 
+						result_d3, result_dest_d3, result_valid_d3, rob_p_reg_1, rob_p_reg_2,
+						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3); 
 
 	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -53,12 +53,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	end
 
 	import p::rat;
-	import p::free_pool;
-	import p::p_reg_R;
+	//import p::free_pool;
 	import p::p_regs;
-	import p::rs;
-	import p::rob;
-	import p::FU_ready;
 	
 	reg [7:0] mem[127:0];	// Instruction Memory
 	
@@ -117,6 +113,9 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [31:0] instr_ro_2;
 	reg en_flag_ro;
 	
+	reg [5:0] old_pd_ro_1;
+	reg [5:0] old_pd_ro_2;
+	
 	//Dispatch Stage Regs
 	reg en_flag_dii;
 	reg [6:0] opcode_dii_1;
@@ -158,6 +157,26 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [3:0] result_ROB_d3;
 	reg [1:0] result_FU_d3;
 	
+	output reg [5:0] rob_p_reg_1;
+	reg [6:0] rob_opcode_1;
+	output reg [5:0] rob_p_reg_2;
+	reg [6:0] rob_opcode_2;
+	
+	output reg forward_flag_1;
+	output reg [5:0] dest_R_1;
+	output reg [31:0] forwarded_data_1;
+	output reg forward_flag_2;
+	output reg [5:0] dest_R_2;
+	output reg [31:0] forwarded_data_2;
+	output reg forward_flag_3;
+	output reg [5:0] dest_R_3;
+	output reg [31:0] forwarded_data_3;
+	
+	reg [5:0] old_pd_dii_1;
+	reg [5:0] old_pd_dii_2;
+	reg [5:0] o_rob_p_reg_1;
+	reg [5:0] o_rob_p_reg_2;
+	
 	//Complete stage Regs
 	
 	reg en_flag_ci;
@@ -180,6 +199,11 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [3:0] result_ROB_c3;
 	reg [1:0] result_FU_c3;
 	
+	reg retire_flag_1;
+	reg [5:0] fp_ind_1;
+	reg retire_flag_2;
+	reg [5:0] fp_ind_2;
+	
 	reg en_flag_co;
 	
 	
@@ -192,20 +216,27 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	//Rename stage
 	rename ren(en_flag_ri, opcode_ri_1, func3_ri_1, func7_ri_1, rs1_ri_1, rs2_ri_1, rd_ri_1, instr_ri_1, opcode_ro_1, func3_ro_1, func7_ro_1, ps1_ro_1, ps2_ro_1, pd_ro_1, instr_ro_1,
-					opcode_ri_2, func3_ri_2, func7_ri_2, rs1_ri_2, rs2_ri_2, rd_ri_2, instr_ri_2, opcode_ro_2, func3_ro_2, func7_ro_2, ps1_ro_2, ps2_ro_2, pd_ro_2, instr_ro_2, en_flag_ro);
+					opcode_ri_2, func3_ri_2, func7_ri_2, rs1_ri_2, rs2_ri_2, rd_ri_2, instr_ri_2, opcode_ro_2, func3_ro_2, func7_ro_2, ps1_ro_2, ps2_ro_2, pd_ro_2, instr_ro_2, en_flag_ro,
+					old_pd_ro_1, old_pd_ro_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2);
 					
 	//Dispatch stage
 	dispatch disp(en_flag_dii, opcode_dii_1, func3_dii_1, func7_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, 
 						opcode_dii_2, func3_dii_2, func7_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, en_flag_dio,
 						result_d1, result_dest_d1, result_valid_d1, result_ROB_d1, result_FU_d1, 
 						result_d2, result_dest_d2, result_valid_d2, result_ROB_d2, result_FU_d2,
-						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3);
+						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3, 
+						rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
+						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
+						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2);
 	
 	//Complete stage
 	
 	complete comp(en_flag_ci, result_c1, result_dest_c1, result_valid_c1, result_ROB_c1, result_FU_c1, 
 									result_c2, result_dest_c2, result_valid_c2, result_ROB_c2, result_FU_c2,
-									result_c3, result_dest_c3, result_valid_c3, result_ROB_c3, result_FU_c3, en_flag_co);
+									result_c3, result_dest_c3, result_valid_c3, result_ROB_c3, result_FU_c3, en_flag_co, 
+									rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
+									forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
+									o_rob_p_reg_1, o_rob_p_reg_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2);
 	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
@@ -213,25 +244,13 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
 		integer n;
 
-		for(n = 0; n < 2; n = n + 1) begin
-			FU_ready[n] = 1;
-		end 
-		
-		for(n = 0; n < 16; n = n + 1) begin
-			rs[n].in_use = 0;
-			rob[n].v = 0;
-		end 
 		
 		for(n = 0; n < 32; n = n + 1) begin
 			rat[n] = n;
-			free_pool[n] = 1;
-			p_reg_R[n] = 1;
 			p_regs[n] = 0;
 		end 
 
 		for(n = 32; n < 64; n = n + 1) begin
-			free_pool[n] = 0;
-			p_reg_R[n] = 1;
 			p_regs[n] = 0;
 		end
 	
@@ -315,6 +334,9 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		pd_dii_2 <= pd_ro_2;
 		instr_dii_2 <= instr_ro_2;
 		
+		old_pd_dii_1 <= old_pd_ro_1;
+		old_pd_dii_2 <= old_pd_ro_2;
+		
 	end
 	
 	
@@ -345,18 +367,19 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	
 	always @(posedge clk) begin
+		/*
 		$display("RS ROB Index 1: %b", rs[rs_line_dio_1].rob_index);
 		$display("RS Dest Reg 1: %b", rs[rs_line_dio_1].dest_reg);
-		$display("ROB in use 1: %b", rob[rs_line_dio_1].v);
-		$display("ROB instr_type 1: %b", rob[rs_line_dio_1].instr_type);
-		$display("ROB phy reg 1: %b", rob[rs_line_dio_1].phy_reg);
+		//$display("ROB in use 1: %b", rob[rs_line_dio_1].v);
+		//$display("ROB instr_type 1: %b", rob[rs_line_dio_1].instr_type);
+		//$display("ROB phy reg 1: %b", rob[rs_line_dio_1].phy_reg);
 		
 		$display("RS ROB Index 2: %b", rs[rs_line_dio_2].rob_index);
 		$display("RS Dest Reg 2: %b", rs[rs_line_dio_2].dest_reg);
-		$display("ROB in use 2: %b", rob[rs_line_dio_2].v);
-		$display("ROB instr_type 2: %b", rob[rs_line_dio_2].instr_type);
-		$display("ROB phy reg 2: %b", rob[rs_line_dio_2].phy_reg);
-
+		//$display("ROB in use 2: %b", rob[rs_line_dio_2].v);
+		//$display("ROB instr_type 2: %b", rob[rs_line_dio_2].instr_type);
+		//$display("ROB phy reg 2: %b", rob[rs_line_dio_2].phy_reg);
+		*/
 
 		/*
 		$display("In Use 1: %b", rs[rs_line_dio_1].in_use);
