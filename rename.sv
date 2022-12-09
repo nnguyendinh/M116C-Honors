@@ -110,8 +110,9 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 				pd_1 = 0;
 			end
 			
-			$display("free_p = %d", free_p);
-
+			$display("rename free_p 1 = %d", free_p);
+			$display("rename pd_1 = %d", pd_1);
+			
 			opcode_1_ = opcode_1;	// The signals we are passing and not changing
 			func3_1_ = func3_1;
 			func7_1_ = func7_1;
@@ -150,6 +151,15 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 			func3_2_ = func3_2;
 			func7_2_ = func7_2;
 			instr_2_ = instr_2;
+			
+			$display("rename free_p 2 = %d", free_p);
+			$display("rename pd_2 = %d", pd_2);
+			
+			/*
+			for(n = 0; n < 64; n = n + 1) begin
+				$display("free_pool[%d]: %b", n, free_pool[n]); 
+			end
+			*/	
 		end
 		
 		else begin

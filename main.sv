@@ -42,7 +42,9 @@ endpackage
 module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, rd_do_2, ps1_ro_1, ps2_ro_1, pd_ro_1, ps1_ro_2, ps2_ro_2, pd_ro_2,
 				result_d1, result_dest_d1, result_valid_d1, result_d2, result_dest_d2, result_valid_d2,
 						result_d3, result_dest_d3, result_valid_d3, rob_p_reg_1, rob_p_reg_2,
-						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3); 
+						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
+						ps1_dii_1, ps2_dii_1, pd_dii_1, ps1_dii_2, ps2_dii_2, pd_dii_2,
+						retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2); 
 
 	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -121,9 +123,9 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [6:0] opcode_dii_1;
 	reg [2:0] func3_dii_1;
 	reg [6:0] func7_dii_1;
-	reg [5:0] ps1_dii_1;
-	reg [5:0] ps2_dii_1;
-	reg [5:0] pd_dii_1;
+	output reg [5:0] ps1_dii_1;
+	output reg [5:0] ps2_dii_1;
+	output reg [5:0] pd_dii_1;
 	reg [31:0] instr_dii_1;
 	integer rs_line_dio_1;
 	reg [6:0] opcode_dio_1;
@@ -131,9 +133,9 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [6:0] opcode_dii_2;
 	reg [2:0] func3_dii_2;
 	reg [6:0] func7_dii_2;
-	reg [5:0] ps1_dii_2;
-	reg [5:0] ps2_dii_2;
-	reg [5:0] pd_dii_2;
+	output reg [5:0] ps1_dii_2;
+	output reg [5:0] ps2_dii_2;
+	output reg [5:0] pd_dii_2;
 	reg [31:0] instr_dii_2;
 	integer rs_line_dio_2;
 	reg [6:0] opcode_dio_2;
@@ -199,10 +201,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [3:0] result_ROB_c3;
 	reg [1:0] result_FU_c3;
 	
-	reg retire_flag_1;
-	reg [5:0] fp_ind_1;
-	reg retire_flag_2;
-	reg [5:0] fp_ind_2;
+	output reg retire_flag_1;
+	output reg [5:0] fp_ind_1;
+	output reg retire_flag_2;
+	output reg [5:0] fp_ind_2;
 	
 	reg en_flag_co;
 	
@@ -367,49 +369,11 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	
 	always @(posedge clk) begin
-		/*
-		$display("RS ROB Index 1: %b", rs[rs_line_dio_1].rob_index);
-		$display("RS Dest Reg 1: %b", rs[rs_line_dio_1].dest_reg);
-		//$display("ROB in use 1: %b", rob[rs_line_dio_1].v);
-		//$display("ROB instr_type 1: %b", rob[rs_line_dio_1].instr_type);
-		//$display("ROB phy reg 1: %b", rob[rs_line_dio_1].phy_reg);
+		$display("pd_ro_1: %d", pd_ro_1);
+		$display("pd_ro_2: %d", pd_ro_2);
 		
-		$display("RS ROB Index 2: %b", rs[rs_line_dio_2].rob_index);
-		$display("RS Dest Reg 2: %b", rs[rs_line_dio_2].dest_reg);
-		//$display("ROB in use 2: %b", rob[rs_line_dio_2].v);
-		//$display("ROB instr_type 2: %b", rob[rs_line_dio_2].instr_type);
-		//$display("ROB phy reg 2: %b", rob[rs_line_dio_2].phy_reg);
-		*/
-
-		/*
-		$display("In Use 1: %b", rs[rs_line_dio_1].in_use);
-		$display("Op 1: %b", rs[rs_line_dio_1].op);
-		$display("Func3 1: %b", rs[rs_line_dio_1].func3);
-		$display("Func7 1: %b", rs[rs_line_dio_1].func7);
-		$display("Dest Reg 1: %b", rs[rs_line_dio_1].dest_reg);
-		$display("Src 1 Reg 1: %b", rs[rs_line_dio_1].src_reg_1);
-		$display("Src 1 Data 1: %b", rs[rs_line_dio_1].src_data_1);
-		$display("Src 1 Ready 1: %b", rs[rs_line_dio_1].src1_ready);
-		$display("Src 2 Reg 1: %b", rs[rs_line_dio_1].src_reg_2);
-		$display("Src 2 Data 1: %b", rs[rs_line_dio_1].src_data_2);
-		$display("Src 2 Ready 1: %b", rs[rs_line_dio_1].src2_ready);
-		$display("FU Index 1: %b", rs[rs_line_dio_1].fu_index);
-		$display("ROB Index 1: %b", rs[rs_line_dio_1].rob_index);
-
-		$display("In Use 2: %b", rs[rs_line_dio_1].in_use);
-		$display("Op 2: %b", rs[rs_line_dio_2].op);
-		$display("Func3 2: %b", rs[rs_line_dio_2].func3);
-		$display("Func7 2: %b", rs[rs_line_dio_2].func7);
-		$display("Dest Reg 2: %b", rs[rs_line_dio_2].dest_reg);
-		$display("Src 1 Reg 2: %b", rs[rs_line_dio_2].src_reg_1);
-		$display("Src 1 Data 2: %b", rs[rs_line_dio_2].src_data_1);
-		$display("Src 1 Ready 2: %b", rs[rs_line_dio_2].src1_ready);
-		$display("Src 2 Reg 2: %b", rs[rs_line_dio_2].src_reg_2);
-		$display("Src 2 Data 2: %b", rs[rs_line_dio_2].src_data_2);
-		$display("Src 2 Ready 2: %b", rs[rs_line_dio_2].src2_ready);
-		$display("FU Index 2: %b", rs[rs_line_dio_2].fu_index);
-		$display("ROB Index 2: %b", rs[rs_line_dio_2].rob_index);
-		*/
+		$display("pd_dii_1: %d", pd_dii_1);
+		$display("pd_dii_2: %d", pd_dii_2);
 	end
 	
 endmodule

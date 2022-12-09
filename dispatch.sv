@@ -8,7 +8,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rob_p_1, rob_op_1, rob_p_2, rob_op_2,
 						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
 						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2);
-
+						
 	//import p::p_reg_R;
 	import p::rs_row;
 	import p::rob_row;
@@ -124,10 +124,14 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		$display("Dispatch enabled: %b", en_flag_i);
 		
 		if(en_flag_i == 1) begin
+			$display("initial pd_1: %d", pd_1);
+			$display("initial pd_2: %d", pd_2);
 			
 			//Update p_reg_R from complete stage
 			if(f_flag_1 == 1) begin
 				p_reg_R[dest_r_1] = 1;
+				
+				$display("Updating any src reg 1: %d", dest_r_1);
 				
 				//Update source registers from data forwarded from complete stage
 				for(integer n = 0; n < 16; n = n + 1) begin
@@ -147,6 +151,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			if(f_flag_2 == 1) begin
 				p_reg_R[dest_r_2] = 1;
 				
+				$display("Updating any src reg 2: %d", dest_r_2);
+				
 				for(integer n = 0; n < 16; n = n + 1) begin
 					if (rs[n].src_reg_1 == dest_r_2) begin
 						rs[n].src_data_1 = f_data_2;
@@ -162,6 +168,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			
 			if(f_flag_3 == 1) begin
 				p_reg_R[dest_r_3] = 1;
+				
+				$display("Updating any src reg 3: %d", dest_r_3);
 				
 				for(integer n = 0; n < 16; n = n + 1) begin
 					if (rs[n].src_reg_1 == dest_r_3) begin
@@ -186,21 +194,21 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				
 				if (rs[num].in_use == 0 && rs_found == 0) begin
 					un = num;
-					$display("found un: %d, rs_f: %b", num, rs_found);
+					//$display("found un: %d, rs_f: %b", num, rs_found);
 					rs_found = 1;
 				end
 				else if (rs[num].in_use == 0 && rs_found == 1) begin
 					un_2 = num;
-					$display("found un_2: %d, rs_f: %b", num, rs_found);
+					//$display("found un_2: %d, rs_f: %b", num, rs_found);
 					rs_found = 2;
 				end
 				
 			end
 			
-			$display("1st RS line found: %d",un);
-			$display("2nd RS line found: %d",un_2);
+			//$display("1st RS line found: %d",un);
+			//$display("2nd RS line found: %d",un_2);
 			
-			// Issue/Fire Stage
+			// Issue/Fire Stage////////////////////////////////////////////////
 			
 			result_valid_1 = 0;
 			result_valid_2 = 0;
@@ -212,9 +220,6 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
 						&& instr_found_1 == 0) begin
-						
-					//clear the whole row
-					rs[num] = 0;
 					
 					ALU_opcode_1 = rs[num].op;
 					ALU_func3_1 = rs[num].func3;
@@ -230,8 +235,10 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					
 					instr_found_1 = 1;
 					$display("INSTRUCTION 1 FIRED");
-					$display("%h + %h -> P_reg %b", ALU_source_1_1, ALU_source_2_1, result_dest_1);
+					$display("%d + %d -> P_reg %d", ALU_source_1_1, ALU_source_2_1, result_dest_1);
 					
+					//clear the whole row
+					rs[num] = 0;
 				end
 			end
 			
@@ -242,8 +249,6 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
 						&& instr_found_2 == 0) begin
-						
-					rs[num] = 0;
 					
 					ALU_opcode_2 = rs[num].op;
 					ALU_func3_2 = rs[num].func3;
@@ -258,7 +263,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					result_FU_2 = rs[num].fu_index;
 					instr_found_2 = 1;
 					$display("INSTRUCTION 2 FIRED");
-					$display("%h + %h -> P_reg %b", ALU_source_1_2, ALU_source_2_2, result_dest_2);
+					$display("%d + %d -> P_reg %d", ALU_source_1_2, ALU_source_2_2, result_dest_2);
+					
+					rs[num] = 0;
 				end
 			end
 			
@@ -269,7 +276,6 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
 						&& instr_found_3 == 0) begin
 						
-					rs[num] = 0;
 					
 					ALU_opcode_3 = rs[num].op;
 					ALU_func3_3 = rs[num].func3;
@@ -284,17 +290,20 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					result_FU_3 = rs[num].fu_index;
 					instr_found_3 = 1;
 					$display("INSTRUCTION 3 FIRED");
-					$display("%h + %h -> P_reg %b", ALU_source_1_3, ALU_source_2_3, result_dest_3);
+					$display("%d + %d -> P_reg %d", ALU_source_1_3, ALU_source_2_3, result_dest_3);
+					
+					rs[num] = 0;
 				end
 			end
 
-			
+			//Rest of Dispatch stage ///////////////////////////////////////////////
 			rs_line_1 = un; 
 			
 			rs[un].in_use = 1'b1;
 			rs[un].op = opcode_1;
 			rs[un].func3 = func3_1;
 			rs[un].func7 = func7_1;
+			$display("pd_1: %d", pd_1);
 			rs[un].dest_reg = pd_1;
 			rs[un].src_reg_1 = ps1_1;
 			rs[un].src_reg_2 = ps2_1;
@@ -369,6 +378,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			rs[un_2].op = opcode_2;
 			rs[un_2].func3 = func3_2;
 			rs[un_2].func7 = func7_2;
+			$display("pd_2: %d", pd_2);
 			rs[un_2].dest_reg = pd_2;
 			rs[un_2].src_reg_1 = ps1_2;
 			rs[un_2].src_reg_2 = ps2_1;
@@ -431,7 +441,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			//Mark destination register as not ready
 			p_reg_R[pd_2] = 0;
 
-			
+			/*
 			//Display entire reservation station
 			for(integer n = 0; n < 16; n = n + 1) begin
 				$display("RS Line %d: %b, %b, %b, %b, %d, %d, %d, %d, %d, %d, %d, %b, %b", n, rs[n].in_use, 
@@ -439,6 +449,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
 						rs[n].src2_ready, rs[n].fu_index, rs[n].rob_index);
 			end
+			*/
 			
 		end
 	else begin
