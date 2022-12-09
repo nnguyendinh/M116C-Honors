@@ -77,8 +77,12 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	output reg [1:0] result_FU_2;
 	output reg [1:0] result_FU_3;
 	
-	input [5:0] o_pd_1;
+	input [5:0] o_pd_1; //old phy info added to the ROB 
 	input [5:0] o_pd_2;
+	
+	//Outside of the pipeline
+	
+	//Outputs to ROB
 	output reg [5:0] rob_p_1;
 	output reg [6:0] rob_op_1;
 	output reg [5:0] rob_p_2;
@@ -86,6 +90,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	output reg [5:0] o_rob_p_1;
 	output reg [5:0] o_rob_p_2;
 	
+	//Updates to source register from complete stage
 	input f_flag_1;
 	input [5:0] dest_r_1;
 	input [31:0] f_data_1;
@@ -111,17 +116,33 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	reg instr_found_2 = 0;
 	reg instr_found_3 = 0;
 	rob_row dum;
-	rob_row dum2;	
+	rob_row dum2;
+	reg [5:0] prev_pd_1;
 
 	ALU fu_1(ALU_opcode_1, ALU_func3_1, ALU_func7_1, ALU_source_1_1, ALU_source_2_1, result_dest_1, result_1);
 	ALU fu_2(ALU_opcode_2, ALU_func3_2, ALU_func7_2, ALU_source_1_2, ALU_source_2_2, result_dest_2, result_2);
 	ALU fu_3(ALU_opcode_3, ALU_func3_3, ALU_func7_3, ALU_source_1_3, ALU_source_2_3, result_dest_3, result_3);
+	
+	initial begin
+	
+		//before enable flag is sent thru, initialize reservation station
+		for(integer n = 0; n < 16; n = n + 1) begin
+			rs[n].in_use = 0;
+		end 
+		
+		for(integer n = 0; n < 64; n = n + 1) begin
+			p_reg_R[n] = 1;
+		end 
+		
+		prev_pd_1 = 0; //set to any value not equal to initial pd_1
+	end
 	
 	always@(*) begin
 		//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
 		//find first unused reservation station --> loop to find first unused every time?
 		
 		$display("Dispatch enabled: %b", en_flag_i);
+		$display("Prev pd 1:, %d", prev_pd_1);
 		
 		if(en_flag_i == 1) begin
 			$display("initial pd_1: %d", pd_1);
@@ -183,288 +204,278 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					end
 				end
 			end 
-			
 
+			if(prev_pd_1 != pd_1) begin //make sure it's a different cycle
 			
-			//Actual Dispatch/fire stuff////////////////////////////////////////
-			rs_found = 0;
-			
-			// Find first two unused rows in the RS
-			for(num = 0; num < 16; num = num + 1) begin
+				//Actual Dispatch/fire stuff////////////////////////////////////////
+				prev_pd_1 = pd_1;
+				rs_found = 0;
 				
-				if (rs[num].in_use == 0 && rs_found == 0) begin
-					un = num;
-					//$display("found un: %d, rs_f: %b", num, rs_found);
-					rs_found = 1;
+				// Find first two unused rows in the RS
+				for(num = 0; num < 16; num = num + 1) begin
+					
+					if (rs[num].in_use == 0 && rs_found == 0) begin
+						un = num;
+						//$display("found un: %d, rs_f: %b", num, rs_found);
+						rs_found = 1;
+					end
+					else if (rs[num].in_use == 0 && rs_found == 1) begin
+						un_2 = num;
+						//$display("found un_2: %d, rs_f: %b", num, rs_found);
+						rs_found = 2;
+					end
+					
 				end
-				else if (rs[num].in_use == 0 && rs_found == 1) begin
-					un_2 = num;
-					//$display("found un_2: %d, rs_f: %b", num, rs_found);
-					rs_found = 2;
-				end
+					
+				//$display("1st RS line found: %d",un);
+				//$display("2nd RS line found: %d",un_2);
 				
-			end
-			
-			//$display("1st RS line found: %d",un);
-			//$display("2nd RS line found: %d",un_2);
-			
-			// Issue/Fire Stage////////////////////////////////////////////////
-			
-			result_valid_1 = 0;
-			result_valid_2 = 0;
-			result_valid_3 = 0;
-			
-			// Fire first instruction
-			instr_found_1 = 0;
-			for(num = 0; num < 16; num = num + 1) begin
-			
-				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-						&& instr_found_1 == 0) begin
-					
-					ALU_opcode_1 = rs[num].op;
-					ALU_func3_1 = rs[num].func3;
-					ALU_func7_1 = rs[num].func7;
-					ALU_source_1_1 = rs[num].src_data_1;
-					ALU_source_2_1 = rs[num].src_data_2;
-
-					result_dest_1 = rs[num].dest_reg;
-					
-					result_valid_1 = 1;
-					result_ROB_1 = rs[num].rob_index;
-					result_FU_1 = rs[num].fu_index;
-					
-					instr_found_1 = 1;
-					$display("INSTRUCTION 1 FIRED");
-					$display("%d + %d -> P_reg %d", ALU_source_1_1, ALU_source_2_1, result_dest_1);
-					
-					//clear the whole row
-					rs[num] = 0;
-				end
-			end
-			
-			
-			// Fire second instruction
-			instr_found_2 = 0;
-			for(num = 0; num < 16; num = num + 1) begin
-			
-				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-						&& instr_found_2 == 0) begin
-					
-					ALU_opcode_2 = rs[num].op;
-					ALU_func3_2 = rs[num].func3;
-					ALU_func7_2 = rs[num].func7;
-					ALU_source_1_2 = rs[num].src_data_1;
-					ALU_source_2_2 = rs[num].src_data_2;
-
-					result_dest_2 = rs[num].dest_reg;
-					
-					result_valid_2 = 1;
-					result_ROB_2 = rs[num].rob_index;
-					result_FU_2 = rs[num].fu_index;
-					instr_found_2 = 1;
-					$display("INSTRUCTION 2 FIRED");
-					$display("%d + %d -> P_reg %d", ALU_source_1_2, ALU_source_2_2, result_dest_2);
-					
-					rs[num] = 0;
-				end
-			end
-			
-			// Fire third instruction
-			instr_found_3 = 0;
-			for(num = 0; num < 16; num = num + 1) begin
-			
-				if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-						&& instr_found_3 == 0) begin
+				// Issue/Fire Stage////////////////////////////////////////////////
+				
+				result_valid_1 = 0;
+				result_valid_2 = 0;
+				result_valid_3 = 0;
+				
+				// Fire first instruction
+				instr_found_1 = 0;
+				for(num = 0; num < 16; num = num + 1) begin
+				
+					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
+							&& instr_found_1 == 0) begin
 						
-					
-					ALU_opcode_3 = rs[num].op;
-					ALU_func3_3 = rs[num].func3;
-					ALU_func7_3 = rs[num].func7;
-					ALU_source_1_3 = rs[num].src_data_1;
-					ALU_source_2_3 = rs[num].src_data_2;
+						ALU_opcode_1 = rs[num].op;
+						ALU_func3_1 = rs[num].func3;
+						ALU_func7_1 = rs[num].func7;
+						ALU_source_1_1 = rs[num].src_data_1;
+						ALU_source_2_1 = rs[num].src_data_2;
 
-					result_dest_3 = rs[num].dest_reg;
-					
-					result_valid_3 = 1;
-					result_ROB_3 = rs[num].rob_index;
-					result_FU_3 = rs[num].fu_index;
-					instr_found_3 = 1;
-					$display("INSTRUCTION 3 FIRED");
-					$display("%d + %d -> P_reg %d", ALU_source_1_3, ALU_source_2_3, result_dest_3);
-					
-					rs[num] = 0;
+						result_dest_1 = rs[num].dest_reg;
+						
+						result_valid_1 = 1;
+						result_ROB_1 = rs[num].rob_index;
+						result_FU_1 = rs[num].fu_index;
+						
+						instr_found_1 = 1;
+						$display("INSTRUCTION 1 FIRED");
+						$display("%d + %d -> P_reg %d", ALU_source_1_1, ALU_source_2_1, result_dest_1);
+						
+						//clear the whole row
+						rs[num] = 0;
+					end
 				end
-			end
-
-			//Rest of Dispatch stage ///////////////////////////////////////////////
-			rs_line_1 = un; 
-			
-			rs[un].in_use = 1'b1;
-			rs[un].op = opcode_1;
-			rs[un].func3 = func3_1;
-			rs[un].func7 = func7_1;
-			$display("pd_1: %d", pd_1);
-			rs[un].dest_reg = pd_1;
-			rs[un].src_reg_1 = ps1_1;
-			rs[un].src_reg_2 = ps2_1;
-			
-			//Set source 1 data if possible
-			case (opcode_1)
-				7'b0010011: begin	// ADDI & ANDI
-					rs[un].src_data_1 = p_regs[ps1_1];
-					rs[un].src1_ready = p_reg_R[ps1_1];
-				end
-				7'b0110011: begin	// ADD, SUB, XOR, SRA
-					rs[un].src_data_1 = p_regs[ps1_1];
-					rs[un].src1_ready = p_reg_R[ps1_1];
-				end
-				default: begin
-					rs[un].src_data_1 = 31'b0;
-					rs[un].src1_ready = 1'b0;
-					
-				end
-			endcase
-			
-			//Set source 2 data/immediate if possible
-			case (opcode_1)
-				7'b0010011: begin	// ADDI & ANDI
-					rs[un].src_data_2 = {20'b0, instr_1[31:20]};
-					rs[un].src2_ready = 1'b1;
-				end
-				7'b0110011: begin	// ADD, SUB, XOR, SRA
-					rs[un].src_data_2 = p_regs[ps2_1];
-					rs[un].src2_ready = p_reg_R[ps2_1];
-				end
-				default: begin
-					rs[un].src_data_2 = 31'b0;
-					rs[un].src2_ready = 1'b0;
-				end
-			endcase
-			
-			
-		//determine fu_index from opcode
-			if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is SW or LW
-				rs[un].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
-			end
-			else begin
-				if(switch == 0) begin //alternate between FU 1 and 2
-					rs[un].fu_index = 0;
-					switch = 1;
-				end
-				else begin
-					rs[un].fu_index = 1; 
-					switch = 0;
-				end
-			end
-		
-			//Set up the ROB row corresponding to the instruction 
-			rob_p_1 = pd_1;
-			rob_op_1 = opcode_1;
-			o_rob_p_1 = o_pd_1;
-			
-			//Mark destination register as not ready
-			p_reg_R[pd_1] = 1'b0;
-			
-
-			
-			
-			
-			/////////////// OK NOW DO IT AGAIN :) /////////////////////////
-			
-			
-			rs_line_2 = un_2; 
-			
-			rs[un_2].in_use = 1'b1;
-			rs[un_2].op = opcode_2;
-			rs[un_2].func3 = func3_2;
-			rs[un_2].func7 = func7_2;
-			$display("pd_2: %d", pd_2);
-			rs[un_2].dest_reg = pd_2;
-			rs[un_2].src_reg_1 = ps1_2;
-			rs[un_2].src_reg_2 = ps2_1;
-
-			//Set source 1 data if possible
-			case (opcode_1)
-				7'b0010011: begin	// ADDI & ANDI
-					rs[un_2].src_data_1 = p_regs[ps1_2];
-					rs[un_2].src1_ready = p_reg_R[ps1_2];
-				end
-				7'b0110011: begin	// ADD, SUB, XOR, SRA
-					rs[un_2].src_data_1 = p_regs[ps1_2];
-					rs[un_2].src1_ready = p_reg_R[ps1_2];
-				end
-				default: begin
-					rs[un_2].src_data_1 = 31'b0;
-					rs[un_2].src2_ready = 1'b0;
-				end
-			endcase
 				
-			//Set source 2 data/immediate if possible
-			case (opcode_1)
-				7'b0010011: begin	// ADDI & ANDI
-					rs[un_2].src_data_2 = {20'b0, instr_2[31:20]};
-					rs[un_2].src2_ready = 1'b1;
+				
+				// Fire second instruction
+				instr_found_2 = 0;
+				for(num = 0; num < 16; num = num + 1) begin
+				
+					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
+							&& instr_found_2 == 0) begin
+						
+						ALU_opcode_2 = rs[num].op;
+						ALU_func3_2 = rs[num].func3;
+						ALU_func7_2 = rs[num].func7;
+						ALU_source_1_2 = rs[num].src_data_1;
+						ALU_source_2_2 = rs[num].src_data_2;
+
+						result_dest_2 = rs[num].dest_reg;
+						
+						result_valid_2 = 1;
+						result_ROB_2 = rs[num].rob_index;
+						result_FU_2 = rs[num].fu_index;
+						instr_found_2 = 1;
+						$display("INSTRUCTION 2 FIRED");
+						$display("%d + %d -> P_reg %d", ALU_source_1_2, ALU_source_2_2, result_dest_2);
+						
+						rs[num] = 0;
+					end
 				end
-				7'b0110011: begin	// ADD, SUB, XOR, SRA
-					rs[un_2].src_data_2 = p_regs[ps2_2];
-					rs[un_2].src2_ready = p_reg_R[ps2_2];
+				
+				// Fire third instruction
+				instr_found_3 = 0;
+				for(num = 0; num < 16; num = num + 1) begin
+				
+					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
+							&& instr_found_3 == 0) begin
+							
+						
+						ALU_opcode_3 = rs[num].op;
+						ALU_func3_3 = rs[num].func3;
+						ALU_func7_3 = rs[num].func7;
+						ALU_source_1_3 = rs[num].src_data_1;
+						ALU_source_2_3 = rs[num].src_data_2;
+
+						result_dest_3 = rs[num].dest_reg;
+						
+						result_valid_3 = 1;
+						result_ROB_3 = rs[num].rob_index;
+						result_FU_3 = rs[num].fu_index;
+						instr_found_3 = 1;
+						$display("INSTRUCTION 3 FIRED");
+						$display("%d + %d -> P_reg %d", ALU_source_1_3, ALU_source_2_3, result_dest_3);
+						
+						rs[num] = 0;
+					end
 				end
-				default: begin
-					rs[un_2].src_data_2 = 31'b0;
-					rs[un_2].src2_ready = 1'b0;
-				end
-			endcase
-					
-			
+
+				//Rest of Dispatch stage ///////////////////////////////////////////////
+				rs_line_1 = un; 
+				
+				rs[un].in_use = 1'b1;
+				rs[un].op = opcode_1;
+				rs[un].func3 = func3_1;
+				rs[un].func7 = func7_1;
+				$display("pd_1: %d", pd_1);
+				rs[un].dest_reg = pd_1;
+				rs[un].src_reg_1 = ps1_1;
+				rs[un].src_reg_2 = ps2_1;
+				
+				//Set source 1 data if possible
+				case (opcode_1)
+					7'b0010011: begin	// ADDI & ANDI
+						rs[un].src_data_1 = p_regs[ps1_1];
+						rs[un].src1_ready = p_reg_R[ps1_1];
+					end
+					7'b0110011: begin	// ADD, SUB, XOR, SRA
+						rs[un].src_data_1 = p_regs[ps1_1];
+						rs[un].src1_ready = p_reg_R[ps1_1];
+					end
+					default: begin
+						rs[un].src_data_1 = 31'b0;
+						rs[un].src1_ready = 1'b0;
+						
+					end
+				endcase
+				
+				//Set source 2 data/immediate if possible
+				case (opcode_1)
+					7'b0010011: begin	// ADDI & ANDI
+						rs[un].src_data_2 = {20'b0, instr_1[31:20]};
+						rs[un].src2_ready = 1'b1;
+					end
+					7'b0110011: begin	// ADD, SUB, XOR, SRA
+						rs[un].src_data_2 = p_regs[ps2_1];
+						rs[un].src2_ready = p_reg_R[ps2_1];
+					end
+					default: begin
+						rs[un].src_data_2 = 31'b0;
+						rs[un].src2_ready = 1'b0;
+					end
+				endcase
+				
+				
 			//determine fu_index from opcode
-			if (opcode_2 == 7'b0100011 || opcode_2 == 7'b0000011) begin//if instr is LW or SW
-				rs[un_2].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
-			end
-			else begin
-				if(switch == 0) begin //alternate between FU 1 and 2
-					rs[un_2].fu_index = 0;
-					switch = 1;
+				if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is SW or LW
+					rs[un].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
 				end
 				else begin
-					rs[un_2].fu_index = 1; 
-					switch = 0;
+					if(switch == 0) begin //alternate between FU 1 and 2
+						rs[un].fu_index = 0;
+						switch = 1;
+					end
+					else begin
+						rs[un].fu_index = 1; 
+						switch = 0;
+					end
+				end
+			
+				//Set up the ROB row corresponding to the instruction 
+				rob_p_1 = pd_1;
+				rob_op_1 = opcode_1;
+				o_rob_p_1 = o_pd_1;
+				
+				//Mark destination register as not ready
+				p_reg_R[pd_1] = 1'b0;
+				
+
+				
+				
+				
+				/////////////// OK NOW DO IT AGAIN :) /////////////////////////
+				
+				
+				rs_line_2 = un_2; 
+				
+				rs[un_2].in_use = 1'b1;
+				rs[un_2].op = opcode_2;
+				rs[un_2].func3 = func3_2;
+				rs[un_2].func7 = func7_2;
+				$display("pd_2: %d", pd_2);
+				rs[un_2].dest_reg = pd_2;
+				rs[un_2].src_reg_1 = ps1_2;
+				rs[un_2].src_reg_2 = ps2_1;
+
+				//Set source 1 data if possible
+				case (opcode_1)
+					7'b0010011: begin	// ADDI & ANDI
+						rs[un_2].src_data_1 = p_regs[ps1_2];
+						rs[un_2].src1_ready = p_reg_R[ps1_2];
+					end
+					7'b0110011: begin	// ADD, SUB, XOR, SRA
+						rs[un_2].src_data_1 = p_regs[ps1_2];
+						rs[un_2].src1_ready = p_reg_R[ps1_2];
+					end
+					default: begin
+						rs[un_2].src_data_1 = 31'b0;
+						rs[un_2].src2_ready = 1'b0;
+					end
+				endcase
+					
+				//Set source 2 data/immediate if possible
+				case (opcode_1)
+					7'b0010011: begin	// ADDI & ANDI
+						rs[un_2].src_data_2 = {20'b0, instr_2[31:20]};
+						rs[un_2].src2_ready = 1'b1;
+					end
+					7'b0110011: begin	// ADD, SUB, XOR, SRA
+						rs[un_2].src_data_2 = p_regs[ps2_2];
+						rs[un_2].src2_ready = p_reg_R[ps2_2];
+					end
+					default: begin
+						rs[un_2].src_data_2 = 31'b0;
+						rs[un_2].src2_ready = 1'b0;
+					end
+				endcase
+						
+				
+				//determine fu_index from opcode
+				if (opcode_2 == 7'b0100011 || opcode_2 == 7'b0000011) begin//if instr is LW or SW
+					rs[un_2].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
+				end
+				else begin
+					if(switch == 0) begin //alternate between FU 1 and 2
+						rs[un_2].fu_index = 0;
+						switch = 1;
+					end
+					else begin
+						rs[un_2].fu_index = 1; 
+						switch = 0;
+					end
+				end
+				
+				
+				
+				//ROB stuff
+				rob_p_2 = pd_2;
+				rob_op_2 = opcode_2;
+				o_rob_p_2 = o_pd_2;
+				
+				//Mark destination register as not ready
+				p_reg_R[pd_2] = 0;
+
+				
+				//Display entire reservation station
+				for(integer n = 0; n < 16; n = n + 1) begin
+					$display("RS Line %d: %b, %b, %b, %b, %d, %d, %d, %d, %d, %d, %d, %b, %b", n, rs[n].in_use, 
+							rs[n].op, rs[n].func3, rs[n].func7, rs[n].dest_reg, rs[n].src_reg_1,
+							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
+							rs[n].src2_ready, rs[n].fu_index, rs[n].rob_index);
 				end
 			end
-			
-			
-			
-			//ROB stuff
-			rob_p_2 = pd_2;
-			rob_op_2 = opcode_2;
-			o_rob_p_2 = o_pd_2;
-			
-			//Mark destination register as not ready
-			p_reg_R[pd_2] = 0;
-
-			/*
-			//Display entire reservation station
-			for(integer n = 0; n < 16; n = n + 1) begin
-				$display("RS Line %d: %b, %b, %b, %b, %d, %d, %d, %d, %d, %d, %d, %b, %b", n, rs[n].in_use, 
-						rs[n].op, rs[n].func3, rs[n].func7, rs[n].dest_reg, rs[n].src_reg_1,
-						rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
-						rs[n].src2_ready, rs[n].fu_index, rs[n].rob_index);
-			end
-			*/
-			
 		end
 	else begin
 		rs_line_1 = 0;
 		rs_line_2 = 0;
-		
-		//before enable flag is sent thru, initialize reservation station
-		for(integer n = 0; n < 16; n = n + 1) begin
-			rs[n].in_use = 0;
-		end 
-		
-		for(integer n = 0; n < 64; n = n + 1) begin
-			p_reg_R[n] = 1;
-		end 
-		
 	end
 	
 	

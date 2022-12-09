@@ -73,93 +73,93 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 		if(en_flag_i == 1) begin
 			
 			//Updates from Retire stage
-			if(rt_flag_1 == 1) begin
-				free_pool[fp_i_1] = 1;
-			end
+			if(rt_flag_1 == 1 || rt_flag_2 == 1) begin
 			
-			if(rt_flag_2 == 1) begin
-				free_pool[fp_i_2] = 1;
-			end
-			
-			
-			//Rename stuff////////////////////////////////////////////////////
-			found_free = 0;
-			free_p = 0;
-			
-			for (n = 0; n < 64; n = n + 1) begin
-				if (free_pool[n] == 0 && found_free == 0) begin
-					found_free = 1;
-					free_p = n;
+				if(rt_flag_1 == 1) begin
+					free_pool[fp_i_1] = 1;
 				end
-			end
+				
+				if(rt_flag_2 == 1) begin
+					free_pool[fp_i_2] = 1;
+				end
 			
-			//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
-			ps1_1 = rat[rs1_1];
-			ps2_1 = rat[rs2_1];
-			
-			//update RAT
-			if (rd_1 != 0) begin
-				old_pd_1 = rat[rd_1];
-				rat[rd_1] = free_p;
-				//update value in "free pool" (actually list of all free_pool)
-				free_pool[free_p] = 1'b1;
-				pd_1 = free_p;
-			end
+			end 
 			
 			else begin
-				pd_1 = 0;
-			end
-			
-			$display("rename free_p 1 = %d", free_p);
-			$display("rename pd_1 = %d", pd_1);
-			
-			opcode_1_ = opcode_1;	// The signals we are passing and not changing
-			func3_1_ = func3_1;
-			func7_1_ = func7_1;
-			instr_1_ = instr_1;
-		
-		/////////////// OK NOW DO IT AGAIN :) /////////////////////////
-		
-			found_free = 0;
-			free_p = 0;
-			
-			for (n = 0; n < 64; n = n + 1) begin
-				if (free_pool[n] == 0 && found_free == 0) begin
-					found_free = 1;
-					free_p = n;
+				//Rename stuff////////////////////////////////////////////////////
+				found_free = 0;
+				free_p = 0;
+				
+				for (n = 0; n < 64; n = n + 1) begin
+					if (free_pool[n] == 0 && found_free == 0) begin
+						found_free = 1;
+						free_p = n;
+					end
 				end
-			end
+				
+				//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
+				ps1_1 = rat[rs1_1];
+				ps2_1 = rat[rs2_1];
+				
+				//update RAT
+				if (rd_1 != 0) begin
+					old_pd_1 = rat[rd_1];
+					rat[rd_1] = free_p;
+					//update value in "free pool" (actually list of all free_pool)
+					free_pool[free_p] = 1'b1;
+					pd_1 = free_p;
+				end
+				
+				else begin
+					pd_1 = 0;
+				end
+				
+				opcode_1_ = opcode_1;	// The signals we are passing and not changing
+				func3_1_ = func3_1;
+				func7_1_ = func7_1;
+				instr_1_ = instr_1;
 			
-			//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
-			ps1_2 = rat[rs1_2];
-			ps2_2 = rat[rs2_2];
+			/////////////// OK NOW DO IT AGAIN :) /////////////////////////
 			
-			//update RAT
-			if (rd_2 != 0) begin
-				old_pd_2 = rat[rd_2];
-				rat[rd_2] = free_p;
-				//update value in "free pool" (actually list of all free_pool)
-				free_pool[free_p] = 1'b1;
-				pd_2 = free_p;
-			end
-			
-			else begin
-				pd_2 = 0;
-			end
+				found_free = 0;
+				free_p = 0;
+				
+				for (n = 0; n < 64; n = n + 1) begin
+					if (free_pool[n] == 0 && found_free == 0) begin
+						found_free = 1;
+						free_p = n;
+					end
+				end
+				
+				//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
+				ps1_2 = rat[rs1_2];
+				ps2_2 = rat[rs2_2];
+				
+				//update RAT
+				if (rd_2 != 0) begin
+					old_pd_2 = rat[rd_2];
+					rat[rd_2] = free_p;
+					//update value in "free pool" (actually list of all free_pool)
+					free_pool[free_p] = 1'b1;
+					pd_2 = free_p;
+				end
+				
+				else begin
+					pd_2 = 0;
+				end
 
-			opcode_2_ = opcode_2;	// The signals we are passing and not changing
-			func3_2_ = func3_2;
-			func7_2_ = func7_2;
-			instr_2_ = instr_2;
-			
-			$display("rename free_p 2 = %d", free_p);
-			$display("rename pd_2 = %d", pd_2);
-			
-			/*
-			for(n = 0; n < 64; n = n + 1) begin
-				$display("free_pool[%d]: %b", n, free_pool[n]); 
+				opcode_2_ = opcode_2;	// The signals we are passing and not changing
+				func3_2_ = func3_2;
+				func7_2_ = func7_2;
+				instr_2_ = instr_2;
+
+				
+				/*
+				for(n = 0; n < 64; n = n + 1) begin
+					$display("free_pool[%d]: %b", n, free_pool[n]); 
+				end
+				*/	
 			end
-			*/	
 		end
 		
 		else begin
@@ -178,17 +178,10 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 			ps2_2 = 0;
 			pd_2 = 0;
 			instr_2_ = 0;
-			
-			for(n = 0; n < 32; n = n + 1) begin
-				free_pool[n] = 1;
-			end 
-
-			for(n = 32; n < 64; n = n + 1) begin
-				free_pool[n] = 0;
-			end
-			
 		end
 		
+		//$display("rename pd_1 = %d", pd_1);
+		//$display("rename pd_2 = %d", pd_2);
 		en_flag_o = en_flag_i;
 		
 	end

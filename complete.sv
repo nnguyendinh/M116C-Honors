@@ -38,9 +38,12 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	input [1:0] result_FU_3;
 	
 	input [5:0] rob_p_1;
+	input [5:0] o_rob_p_1;
 	input [6:0] rob_op_1;
 	input [5:0] rob_p_2;
+	input [5:0] o_rob_p_2;
 	input [6:0] rob_op_2;
+	
 	output reg f_flag_1;
 	output reg [5:0] dest_r_1;
 	output reg [31:0] f_data_1;
@@ -51,8 +54,6 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	output reg [5:0] dest_r_3;
 	output reg [31:0] f_data_3;
 	
-	input [5:0] o_rob_p_1;
-	input [5:0] o_rob_p_2;
 	
 	output reg rt_flag_1;
 	output reg [5:0] fp_i_1;
@@ -68,11 +69,16 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	integer rob_top; //index that represents the first instruction that should be popped
 	integer rat_found;
 
+	initial begin
+		//set ROB tables as unused
+		for(integer n = 0; n < 16; n = n + 1) begin
+			rob[n].v = 0;
+		end
+	end
 	
 	always@(*) begin
 
 	if(en_flag_i == 1) begin
-		
 		
 		//Update from dispatch stage to add an instruction to ROB
 		rob_found = 0;
@@ -274,7 +280,14 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 		
 		end
 		
-		
+		//display entire ROB
+		/*
+		for(integer n = 0; n < 16; n = n + 1) begin
+			$display("ROB Line %d: %b, %b, %d, %d, %d, %d, %d", n, rob[n].v, 
+					rob[n].instr_type, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,
+					rob[n].comp);
+		end
+		*/
 	end
 	
 	else if (en_flag_i == 0) begin
@@ -285,11 +298,6 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	
 
 	else begin
-	
-		//set ROB tables as unused
-		for(integer n = 0; n < 16; n = n + 1) begin
-			rob[n].v = 0;
-		end
 		
 		//top of ROB starts out at index 0
 		rob_top = 0;

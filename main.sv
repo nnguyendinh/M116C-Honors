@@ -369,11 +369,13 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	
 	always @(posedge clk) begin
+		/*
 		$display("pd_ro_1: %d", pd_ro_1);
 		$display("pd_ro_2: %d", pd_ro_2);
 		
 		$display("pd_dii_1: %d", pd_dii_1);
 		$display("pd_dii_2: %d", pd_dii_2);
+		*/
 	end
 	
 endmodule
