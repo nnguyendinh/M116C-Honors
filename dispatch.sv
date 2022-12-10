@@ -109,6 +109,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	integer rob_un;
 	integer rob_un_2;
 	reg switch = 0;
+	reg rob_switch = 0;
 	integer num;
 	reg rob_found = 0;
 	reg [1:0] rs_found = 0;
@@ -148,8 +149,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		//$display("Prev pd 1:, %d", prev_pd_1);
 		
 		if(en_flag_i == 1) begin
-			$display("initial pd_1: %d", pd_1);
-			$display("initial pd_2: %d", pd_2);
+			//$display("initial pd_1: %d", pd_1);
+			//$display("initial pd_2: %d", pd_2);
 			
 			//Update p_reg_R from complete stage
 			if(f_flag_1 == 1) begin
@@ -209,13 +210,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			end 
 			
 			
-			$display("Dispatch pd_1: %d", pd_1);
-			$display("Dispatch prev_pd: %d", prev_pd_1);
-		
-			if (prev_pd_1 == pd_1) begin
-				$display("forwarding is occurring");
-				u_rob = 0; //no need to update ROB since same cycle
-			end
+			//$display("Dispatch pd_1: %d", pd_1);
+			//$display("Dispatch prev_pd: %d", prev_pd_1);
 
 			if(prev_pd_1 != pd_1) begin //make sure it's a different cycle
 			
@@ -338,7 +334,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				rs[un].op = opcode_1;
 				rs[un].func3 = func3_1;
 				rs[un].func7 = func7_1;
-				$display("pd_1: %d", pd_1);
+				//$display("pd_1: %d", pd_1);
 				rs[un].dest_reg = pd_1;
 				rs[un].src_reg_1 = ps1_1;
 				rs[un].src_reg_2 = ps2_1;
@@ -393,7 +389,16 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				end
 			
 				//Set up the ROB row corresponding to the instruction 
-				u_rob = 1;
+				$display("Switching ROB signal");
+				if(rob_switch == 0) begin //alternate ROB signal
+						u_rob = 1;
+						rob_switch = 1;
+					end
+					else begin
+						u_rob = 0; 
+						rob_switch = 0;
+					end
+				
 				rob_p_1 = pd_1;
 				rob_op_1 = opcode_1;
 				o_rob_p_1 = o_pd_1;
@@ -414,7 +419,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				rs[un_2].op = opcode_2;
 				rs[un_2].func3 = func3_2;
 				rs[un_2].func7 = func7_2;
-				$display("pd_2: %d", pd_2);
+				//$display("pd_2: %d", pd_2);
 				rs[un_2].dest_reg = pd_2;
 				rs[un_2].src_reg_1 = ps1_2;
 				rs[un_2].src_reg_2 = ps2_1;
@@ -487,7 +492,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 							rs[n].src2_ready, rs[n].fu_index, rs[n].rob_index);
 				end
 			end
-			
+			//else begin
+			//	u_rob = 0;
+			//end	
 		end
 	else begin
 		rs_line_1 = 0;

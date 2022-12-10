@@ -5,7 +5,7 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 									result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, en_flag_o, 
 									u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, 
 									f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-									o_rob_p_1, o_rob_p_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, pd_i);
+									o_rob_p_1, o_rob_p_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, pd_i, prev_flag);
 	
 	//import p::p_reg_R;
 	import p::rob_row;
@@ -60,6 +60,7 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	output reg [5:0] fp_i_1;
 	output reg rt_flag_2;
 	output reg [5:0] fp_i_2;
+	output reg prev_flag;
 	
 	output reg en_flag_o;
 	
@@ -71,6 +72,7 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	integer rob_found;
 	integer rob_top; //index that represents the first instruction that should be popped
 	integer rat_found;
+	//integer prev_flag;
 
 	initial begin
 		//set ROB tables as unused
@@ -79,6 +81,7 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 		end
 		
 		prev_pd = 0;
+		prev_flag = 0; //Same as intial flag state 0
 	end
 	
 	always@(*) begin
@@ -86,7 +89,10 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	if(en_flag_i == 1) begin
 		
 		//Update from dispatch stage to add an instruction to ROB
-		if(u_rob == 1) begin
+		$display("Prev flag: %b", prev_flag);
+		$display("Current flag: %b", u_rob);
+		if(prev_flag != u_rob) begin
+			prev_flag = u_rob;
 			$display("Update enabled");
 			rob_found = 0;
 			for(integer n = 0; n < 16; n = n + 1) begin
@@ -131,6 +137,13 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 				end
 			end
 		
+			$display("New prev flag: %b", prev_flag);
+			
+			for(integer n = 0; n < 16; n = n + 1) begin
+				$display("Up ROB Line %d: %b, %b, %d, %d, %d, %d, %d", n, rob[n].v, 
+						rob[n].instr_type, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,
+						rob[n].comp);
+			end
 		end
 		
 		
