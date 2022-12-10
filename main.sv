@@ -41,7 +41,7 @@ endpackage
 
 module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, rd_do_2, ps1_ro_1, ps2_ro_1, pd_ro_1, ps1_ro_2, ps2_ro_2, pd_ro_2,
 				result_d1, result_dest_d1, result_valid_d1, result_d2, result_dest_d2, result_valid_d2,
-						result_d3, result_dest_d3, result_valid_d3, rob_p_reg_1, rob_p_reg_2,
+						result_d3, result_dest_d3, result_valid_d3, update_rob, rob_p_reg_1, rob_p_reg_2,
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
 						ps1_dii_1, ps2_dii_1, pd_dii_1, ps1_dii_2, ps2_dii_2, pd_dii_2,
 						retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2); 
@@ -159,6 +159,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [3:0] result_ROB_d3;
 	reg [1:0] result_FU_d3;
 	
+	output reg update_rob;
 	output reg [5:0] rob_p_reg_1;
 	reg [6:0] rob_opcode_1;
 	output reg [5:0] rob_p_reg_2;
@@ -178,6 +179,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [5:0] old_pd_dii_2;
 	reg [5:0] o_rob_p_reg_1;
 	reg [5:0] o_rob_p_reg_2;
+	reg [5:0] pd_1_dio;
 	
 	//Complete stage Regs
 	
@@ -206,6 +208,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	output reg retire_flag_2;
 	output reg [5:0] fp_ind_2;
 	
+	reg [5:0] pd_1_ci;
+	
 	reg en_flag_co;
 	
 	
@@ -227,18 +231,18 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						result_d1, result_dest_d1, result_valid_d1, result_ROB_d1, result_FU_d1, 
 						result_d2, result_dest_d2, result_valid_d2, result_ROB_d2, result_FU_d2,
 						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3, 
-						rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
+						update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
-						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2);
+						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio);
 	
 	//Complete stage
 	
 	complete comp(en_flag_ci, result_c1, result_dest_c1, result_valid_c1, result_ROB_c1, result_FU_c1, 
 									result_c2, result_dest_c2, result_valid_c2, result_ROB_c2, result_FU_c2,
 									result_c3, result_dest_c3, result_valid_c3, result_ROB_c3, result_FU_c3, en_flag_co, 
-									rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
+									update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
 									forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
-									o_rob_p_reg_1, o_rob_p_reg_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2);
+									o_rob_p_reg_1, o_rob_p_reg_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pd_1_ci);
 	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
@@ -346,6 +350,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	always @(posedge clk) begin
 	
 		en_flag_ci <= en_flag_dio;
+		pd_1_ci <= pd_1_dio;
 		
 		result_c1 <= result_d1;
 		result_dest_c1 <= result_dest_d1;

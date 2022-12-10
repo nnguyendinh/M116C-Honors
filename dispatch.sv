@@ -5,9 +5,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1,
 						result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2,
 						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, 
-						rob_p_1, rob_op_1, rob_p_2, rob_op_2,
+						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2,
 						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2);
+						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_);
 						
 	//import p::p_reg_R;
 	import p::rs_row;
@@ -79,10 +79,12 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	
 	input [5:0] o_pd_1; //old phy info added to the ROB 
 	input [5:0] o_pd_2;
+	output reg [5:0] pd_1_;
 	
 	//Outside of the pipeline
 	
 	//Outputs to ROB
+	output reg u_rob;
 	output reg [5:0] rob_p_1;
 	output reg [6:0] rob_op_1;
 	output reg [5:0] rob_p_2;
@@ -135,14 +137,15 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		end 
 		
 		prev_pd_1 = 0; //set to any value not equal to initial pd_1
+		u_rob = 0;
 	end
 	
 	always@(*) begin
 		//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
 		//find first unused reservation station --> loop to find first unused every time?
 		
-		$display("Dispatch enabled: %b", en_flag_i);
-		$display("Prev pd 1:, %d", prev_pd_1);
+		//$display("Dispatch enabled: %b", en_flag_i);
+		//$display("Prev pd 1:, %d", prev_pd_1);
 		
 		if(en_flag_i == 1) begin
 			$display("initial pd_1: %d", pd_1);
@@ -204,10 +207,20 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					end
 				end
 			end 
+			
+			
+			$display("Dispatch pd_1: %d", pd_1);
+			$display("Dispatch prev_pd: %d", prev_pd_1);
+		
+			if (prev_pd_1 == pd_1) begin
+				$display("forwarding is occurring");
+				u_rob = 0; //no need to update ROB since same cycle
+			end
 
 			if(prev_pd_1 != pd_1) begin //make sure it's a different cycle
 			
 				//Actual Dispatch/fire stuff////////////////////////////////////////
+				$display("Dispatch stage enabled");
 				prev_pd_1 = pd_1;
 				rs_found = 0;
 				
@@ -256,7 +269,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						result_FU_1 = rs[num].fu_index;
 						
 						instr_found_1 = 1;
-						$display("INSTRUCTION 1 FIRED");
+						$display("ISSUE ENABLED - INSTRUCTION 1 FIRED");
 						$display("%d + %d -> P_reg %d", ALU_source_1_1, ALU_source_2_1, result_dest_1);
 						
 						//clear the whole row
@@ -284,7 +297,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						result_ROB_2 = rs[num].rob_index;
 						result_FU_2 = rs[num].fu_index;
 						instr_found_2 = 1;
-						$display("INSTRUCTION 2 FIRED");
+						$display("ISSUE ENABLED - INSTRUCTION 2 FIRED");
 						$display("%d + %d -> P_reg %d", ALU_source_1_2, ALU_source_2_2, result_dest_2);
 						
 						rs[num] = 0;
@@ -311,7 +324,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						result_ROB_3 = rs[num].rob_index;
 						result_FU_3 = rs[num].fu_index;
 						instr_found_3 = 1;
-						$display("INSTRUCTION 3 FIRED");
+						$display("ISSUE ENABLED - INSTRUCTION 3 FIRED");
 						$display("%d + %d -> P_reg %d", ALU_source_1_3, ALU_source_2_3, result_dest_3);
 						
 						rs[num] = 0;
@@ -380,6 +393,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				end
 			
 				//Set up the ROB row corresponding to the instruction 
+				u_rob = 1;
 				rob_p_1 = pd_1;
 				rob_op_1 = opcode_1;
 				o_rob_p_1 = o_pd_1;
@@ -463,6 +477,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				//Mark destination register as not ready
 				p_reg_R[pd_2] = 0;
 
+				pd_1_ = pd_1; //to let complete stage know when a new cycle has passed
 				
 				//Display entire reservation station
 				for(integer n = 0; n < 16; n = n + 1) begin
@@ -472,6 +487,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 							rs[n].src2_ready, rs[n].fu_index, rs[n].rob_index);
 				end
 			end
+			
 		end
 	else begin
 		rs_line_1 = 0;
