@@ -7,16 +7,17 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, 
 						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2,
 						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_);
+						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg);
 						
 	//import p::p_reg_R;
 	import p::rs_row;
 	import p::rob_row;
-	import p::p_regs;
+	//import p::p_regs;
 	
 	rs_row rs [16]; //reservation station
 	reg p_reg_R[63:0]; //Table for determining if physical register is ready or not
 	
+	input[31:0] p_rg[63:0]; //p_reg table directly wired from main
 	input en_flag_i;
 	input [6:0] opcode_1;
 	input [2:0] func3_1;
@@ -342,11 +343,11 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				//Set source 1 data if possible
 				case (opcode_1)
 					7'b0010011: begin	// ADDI & ANDI
-						rs[un].src_data_1 = p_regs[ps1_1];
+						rs[un].src_data_1 = p_rg[ps1_1];
 						rs[un].src1_ready = p_reg_R[ps1_1];
 					end
 					7'b0110011: begin	// ADD, SUB, XOR, SRA
-						rs[un].src_data_1 = p_regs[ps1_1];
+						rs[un].src_data_1 = p_rg[ps1_1];
 						rs[un].src1_ready = p_reg_R[ps1_1];
 					end
 					default: begin
@@ -363,7 +364,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un].src2_ready = 1'b1;
 					end
 					7'b0110011: begin	// ADD, SUB, XOR, SRA
-						rs[un].src_data_2 = p_regs[ps2_1];
+						rs[un].src_data_2 = p_rg[ps2_1];
 						rs[un].src2_ready = p_reg_R[ps2_1];
 					end
 					default: begin
@@ -427,11 +428,11 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				//Set source 1 data if possible
 				case (opcode_1)
 					7'b0010011: begin	// ADDI & ANDI
-						rs[un_2].src_data_1 = p_regs[ps1_2];
+						rs[un_2].src_data_1 = p_rg[ps1_2];
 						rs[un_2].src1_ready = p_reg_R[ps1_2];
 					end
 					7'b0110011: begin	// ADD, SUB, XOR, SRA
-						rs[un_2].src_data_1 = p_regs[ps1_2];
+						rs[un_2].src_data_1 = p_rg[ps1_2];
 						rs[un_2].src1_ready = p_reg_R[ps1_2];
 					end
 					default: begin
@@ -447,7 +448,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un_2].src2_ready = 1'b1;
 					end
 					7'b0110011: begin	// ADD, SUB, XOR, SRA
-						rs[un_2].src_data_2 = p_regs[ps2_2];
+						rs[un_2].src_data_2 = p_rg[ps2_2];
 						rs[un_2].src2_ready = p_reg_R[ps2_2];
 					end
 					default: begin

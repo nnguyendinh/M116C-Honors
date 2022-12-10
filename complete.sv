@@ -5,11 +5,10 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 									result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, en_flag_o, 
 									u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, 
 									f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-									o_rob_p_1, o_rob_p_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, pd_i, prev_flag);
-	
-	//import p::p_reg_R;
+									o_rob_p_1, o_rob_p_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, pd_i, prev_flag,
+									rt_index_1, rt_result_1, rt_index_2, rt_result_2);
+
 	import p::rob_row;
-	import p::p_regs;
 	import p::rat;
 
 
@@ -55,11 +54,15 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	output reg [5:0] dest_r_3;
 	output reg [31:0] f_data_3;
 	
-	
+	//retire flags and outputs
 	output reg rt_flag_1;
-	output reg [5:0] fp_i_1;
+	output reg [4:0] rt_index_1; //index of architectural reg to be overwritten
+	output reg [31:0] rt_result_1; //new value that overwrites the architectural reg
+	output reg [5:0] fp_i_1; //old phy register of first retired instruction (for update in rename)
 	output reg rt_flag_2;
-	output reg [5:0] fp_i_2;
+	output reg [4:0] rt_index_2; //index of architectural reg to be overwritten
+	output reg [31:0] rt_result_2; //new value that overwrites the architectural reg
+	output reg [5:0] fp_i_2; //old phy register of second retired instruction (for update in rename)
 	output reg prev_flag;
 	
 	output reg en_flag_o;
@@ -89,12 +92,16 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	if(en_flag_i == 1) begin
 		
 		//Update from dispatch stage to add an instruction to ROB
-		$display("Prev flag: %b", prev_flag);
-		$display("Current flag: %b", u_rob);
+		//$display("Prev flag: %b", prev_flag);
+		//$display("Current flag: %b", u_rob);
 		if(prev_flag != u_rob) begin
 			prev_flag = u_rob;
 			$display("Update enabled");
-			rob_found = 0;
+			
+			
+			//Actually, shouldn't try to find first unused ROB row but rather
+			//just the next in the stack
+			rob_found = 0; 
 			for(integer n = 0; n < 16; n = n + 1) begin
 				if (rob[n].v != 1 && rob_found == 0) begin
 				
@@ -165,13 +172,14 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 					if(rat[n] == rob[rob_top].phy_reg && rat_found == 0) begin
 						//Write to the register
 						//p_regs[n] = rob[rob_top].result;
-						
+						rt_index_1 = n;
+						rt_result_1 = rob[rob_top].result;
 						rat_found = 1;
 					end
 				end		
 				
 				//Clear ROB row
-				rob[rob_top].v = 0;
+				rob[rob_top] = 0;
 				
 				//Update rob pointer
 				if(rob_top <= 16) begin
@@ -180,10 +188,13 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 				else begin
 					rob_top = 0; //go back to beginning of the array
 				end
+				
+				$display("Rob top after 1st retire: %d", rob_top);
 			end
 			else begin
 				rt_flag_1 = 0;
 			end
+			
 			
 			//retire a second time if possible (same code as above)
 			if(rob[rob_top].comp == 1) begin
@@ -196,12 +207,13 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 					if(rat[n] == rob[rob_top].phy_reg && rat_found == 0) begin
 						//Write to the register
 						//p_regs[n] = rob[rob_top].result;
-						
+						rt_index_2 = n;
+						rt_result_2 = rob[rob_top].result;
 						rat_found = 1;
 					end
 				end		
 				
-				rob[rob_top].v = 0;
+				rob[rob_top] = 0;
 				
 				if(rob_top <= 16) begin
 					rob_top = rob_top + 1;
@@ -209,6 +221,8 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 				else begin
 					rob_top = 0; //go back to beginning of the array
 				end
+				
+				$display("Rob top after 2nd retire: %d", rob_top);
 			end
 			else begin
 				rt_flag_2 = 0;

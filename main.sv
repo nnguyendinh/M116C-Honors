@@ -32,10 +32,7 @@ package p;
 	} rob_row;
 	
 	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
-	reg [31:0] p_regs[63:0]; //data that physical regs contain
-	//rs_row rs [16]; //reservation Station (16 rows)
-	//reg p_reg_R[63:0]; //array of flags if p_reg is ready
-	//rob_row rob [16]; //re-order buffer (16 rows)
+	//reg [31:0] p_regs[63:0]; //data that physical regs contain
 endpackage
 	
 
@@ -44,7 +41,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						result_d3, result_dest_d3, result_valid_d3, update_rob, rob_p_reg_1, rob_p_reg_2,
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
 						ps1_dii_1, ps2_dii_1, pd_dii_1, ps1_dii_2, ps2_dii_2, pd_dii_2,
-						retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pr_flag); 
+						retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pr_flag,
+						retire_index_1, retire_result_1, retire_index_2, retire_result_2); 
 
 	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -55,10 +53,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	end
 
 	import p::rat;
-	//import p::free_pool;
-	import p::p_regs;
+	//import p::p_regs;
 	
 	reg [7:0] mem[127:0];	// Instruction Memory
+	reg [31:0] p_regs[63:0]; //data that physical regs contain
 	
 	// Decode Stage Regs
 	//reg enable_flag = 0;
@@ -203,12 +201,16 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [3:0] result_ROB_c3;
 	reg [1:0] result_FU_c3;
 	
-	output reg retire_flag_1;
+	output reg retire_flag_1; //outputs for retire signals
+	output reg [4:0] retire_index_1;
+	output reg [31:0] retire_result_1;
 	output reg [5:0] fp_ind_1;
 	output reg retire_flag_2;
+	output reg [4:0] retire_index_2;
+	output reg [31:0] retire_result_2;
 	output reg [5:0] fp_ind_2;
 	output reg pr_flag;
-	
+
 	reg [5:0] pd_1_ci;
 	
 	reg en_flag_co;
@@ -234,7 +236,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3, 
 						update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
-						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio);
+						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio, p_regs);
 	
 	//Complete stage
 	
@@ -243,7 +245,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 									result_c3, result_dest_c3, result_valid_c3, result_ROB_c3, result_FU_c3, en_flag_co, 
 									update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
 									forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
-									o_rob_p_reg_1, o_rob_p_reg_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pd_1_ci, pr_flag);
+									o_rob_p_reg_1, o_rob_p_reg_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pd_1_ci, pr_flag,
+									retire_index_1, retire_result_1, retire_index_2, retire_result_2);
 	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
@@ -382,6 +385,16 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		$display("pd_dii_1: %d", pd_dii_1);
 		$display("pd_dii_2: %d", pd_dii_2);
 		*/
+		
+		//Writebacks from retire stage
+		if(retire_flag_1 == 1) begin
+			p_regs[retire_index_1] = retire_result_1;
+		end
+		
+		if(retire_flag_2 == 1) begin
+			p_regs[retire_index_2] = retire_result_2;
+		end
+		
 	end
 	
 endmodule
