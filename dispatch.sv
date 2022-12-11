@@ -398,6 +398,10 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					end
 				endcase
 				
+				if (ps1_1 == 0) begin
+					rs[un_2].src1_ready = 1'b1;
+				end
+				
 				//Set source 2 data/immediate if possible
 				case (opcode_1)
 					7'b0010011: begin	// ADDI & ANDI
@@ -415,7 +419,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					7'b0100011: begin		// SW
 						rs[un].src_data_2 = {20'b0, instr_1[31:25], instr_1[11:7]};
 						rs[un].src2_ready = 1'b1;
-						rs[un].sw_reg = p_rg[ps2_1];
+						rs[un].sw_reg = ps2_1;
 						rs[un].sw_ready = p_reg_R[ps2_1];
 					end
 					default: begin
@@ -423,6 +427,10 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un].src2_ready = 1'b0;
 					end
 				endcase
+				
+				if (ps2_1 == 0) begin
+					rs[un].src2_ready = 1'b1;
+				end
 				
 				
 			//determine fu_index from opcode
@@ -456,7 +464,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				o_rob_p_1 = o_pd_1;
 				
 				//Mark destination register as not ready
-				if (opcode_1 != 7'b0100011) begin	// Don't do anything if SW
+				if (opcode_1 != 7'b0100011 && pd_1 != 0) begin	// Don't do anything if SW or x0
 					p_reg_R[pd_1] = 1'b0;
 				end
 				
@@ -473,7 +481,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				//$display("pd_2: %d", pd_2);
 				rs[un_2].dest_reg = pd_2;
 				rs[un_2].src_reg_1 = ps1_2;
-				rs[un_2].src_reg_2 = ps2_1;
+				rs[un_2].src_reg_2 = ps2_2;
 				rs[un_2].sw_reg = 0;
 				rs[un_2].sw_ready = 1'b1;
 
@@ -497,10 +505,14 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					end
 					default: begin
 						rs[un_2].src_data_1 = 31'b0;
-						rs[un_2].src2_ready = 1'b0;
+						rs[un_2].src1_ready = 1'b0;
 					end
 					
 				endcase
+				
+				if (ps1_2 == 0) begin
+					rs[un_2].src1_ready = 1'b1;
+				end
 					
 				//Set source 2 data/immediate if possible
 				case (opcode_2)
@@ -519,7 +531,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					7'b0100011: begin		// SW
 						rs[un_2].src_data_2 = {20'b0, instr_2[31:25], instr_2[11:7]};
 						rs[un_2].src2_ready = 1'b1;
-						rs[un_2].sw_reg = p_rg[ps2_2];
+						rs[un_2].sw_reg = ps2_2;
 						rs[un_2].sw_ready = p_reg_R[ps2_2];
 					end
 					default: begin
@@ -527,6 +539,10 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un_2].src2_ready = 1'b0;
 					end
 				endcase
+				
+				if (ps2_2 == 0) begin
+					rs[un_2].src2_ready = 1'b1;
+				end
 						
 				
 				//determine fu_index from opcode
@@ -553,7 +569,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				
 				//Mark destination register as not ready
 				
-				if (opcode_1 != 7'b0100011) begin			// Don't do anything if SW
+				if (opcode_1 != 7'b0100011 && pd_2 != 0) begin			// Don't do anything if SW
 					p_reg_R[pd_2] = 1'b0;
 				end
 
@@ -561,10 +577,10 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				
 				//Display entire reservation station
 				for(integer n = 0; n < 16; n = n + 1) begin
-					$display("RS Line %d: %b, %b, %b, %b, %d, %d, %d, %d, %d, %d, %d, %b, %b", n, rs[n].in_use, 
+					$display("RS Line %d: %b, %b, %b, %b, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
 							rs[n].op, rs[n].func3, rs[n].func7, rs[n].dest_reg, rs[n].src_reg_1,
 							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
-							rs[n].src2_ready, rs[n].fu_index, rs[n].rob_index);
+							rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
 				end
 			end
 			//else begin

@@ -22,7 +22,7 @@ module ALU(opcode, func3, func7, source_1, source_2, pd, result);
 
 	always@(*) begin
 	
-		if (pd == 0) begin
+		if (pd == 0 && opcode != 7'b0100011) begin
 			result = 0;
 		end
 		
