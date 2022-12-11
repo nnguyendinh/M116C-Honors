@@ -161,14 +161,18 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				
 				//Update source registers from data forwarded from complete stage
 				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == dest_r_1) begin
+					if (rs[n].src_reg_1 == dest_r_1 && rs[n].src1_ready != 1) begin
 						rs[n].src_data_1 = f_data_1;
 						rs[n].src1_ready = 1;
 					end
 					
-					if (rs[n].src_reg_2 == dest_r_1) begin
+					if (rs[n].src_reg_2 == dest_r_1 && rs[n].src2_ready != 1) begin
 						rs[n].src_data_2 = f_data_1;
 						rs[n].src2_ready = 1;
+					end
+					
+					if (rs[n].sw_reg == dest_r_1) begin
+						rs[n].sw_ready = 1;
 					end
 				end
 				
@@ -180,14 +184,18 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				$display("Updating any src reg 2: %d", dest_r_2);
 				
 				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == dest_r_2) begin
+					if (rs[n].src_reg_1 == dest_r_2 && rs[n].src1_ready != 1) begin
 						rs[n].src_data_1 = f_data_2;
 						rs[n].src1_ready = 1;
 					end
 					
-					if (rs[n].src_reg_2 == dest_r_2) begin
+					if (rs[n].src_reg_2 == dest_r_2 && rs[n].src2_ready != 1) begin
 						rs[n].src_data_2 = f_data_2;
 						rs[n].src2_ready = 1;
+					end
+					
+					if (rs[n].sw_reg == dest_r_2) begin
+						rs[n].sw_ready = 1;
 					end
 				end
 			end 
@@ -198,14 +206,18 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				$display("Updating any src reg 3: %d", dest_r_3);
 				
 				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == dest_r_3) begin
+					if (rs[n].src_reg_1 == dest_r_3 && rs[n].src1_ready != 1) begin
 						rs[n].src_data_1 = f_data_3;
 						rs[n].src1_ready = 1;
 					end
 					
-					if (rs[n].src_reg_2 == dest_r_3) begin
+					if (rs[n].src_reg_2 == dest_r_3 && rs[n].src2_ready != 1) begin
 						rs[n].src_data_2 = f_data_3;
 						rs[n].src2_ready = 1;
+					end
+					
+					if (rs[n].sw_reg == dest_r_3) begin
+						rs[n].sw_ready = 1;
 					end
 				end
 			end 
@@ -251,7 +263,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				for(num = 0; num < 16; num = num + 1) begin
 				
 					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-							&& instr_found_1 == 0) begin
+							&& rs[num].sw_ready == 1 && instr_found_1 == 0) begin
 						
 						ALU_opcode_1 = rs[num].op;
 						ALU_func3_1 = rs[num].func3;
@@ -259,7 +271,13 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						ALU_source_1_1 = rs[num].src_data_1;
 						ALU_source_2_1 = rs[num].src_data_2;
 
-						result_dest_1 = rs[num].dest_reg;
+						if (rs[num].op == 7'b0100011) begin	// If SW, we don't use rd
+							$display("SW INSTRUCTION FIREDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
+							result_dest_1 = rs[num].sw_reg;
+						end
+						else begin
+							result_dest_1 = rs[num].dest_reg;
+						end
 						
 						result_valid_1 = 1;
 						result_ROB_1 = rs[num].rob_index;
@@ -280,7 +298,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				for(num = 0; num < 16; num = num + 1) begin
 				
 					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-							&& instr_found_2 == 0) begin
+							&& rs[num].sw_ready == 1 && instr_found_2 == 0) begin
 						
 						ALU_opcode_2 = rs[num].op;
 						ALU_func3_2 = rs[num].func3;
@@ -288,7 +306,13 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						ALU_source_1_2 = rs[num].src_data_1;
 						ALU_source_2_2 = rs[num].src_data_2;
 
-						result_dest_2 = rs[num].dest_reg;
+						if (rs[num].op == 7'b0100011) begin	// If SW, we don't use rd
+							$display("SW INSTRUCTION FIREDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
+							result_dest_2 = rs[num].sw_reg;
+						end
+						else begin
+							result_dest_2 = rs[num].dest_reg;
+						end
 						
 						result_valid_2 = 1;
 						result_ROB_2 = rs[num].rob_index;
@@ -306,7 +330,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				for(num = 0; num < 16; num = num + 1) begin
 				
 					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-							&& instr_found_3 == 0) begin
+							&& rs[num].sw_ready == 1 && instr_found_3 == 0) begin
 							
 						
 						ALU_opcode_3 = rs[num].op;
@@ -315,7 +339,13 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						ALU_source_1_3 = rs[num].src_data_1;
 						ALU_source_2_3 = rs[num].src_data_2;
 
-						result_dest_3 = rs[num].dest_reg;
+						if (rs[num].op == 7'b0100011) begin	// If SW, we don't use rd
+							$display("SW INSTRUCTION FIREDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
+							result_dest_3 = rs[num].sw_reg;
+						end
+						else begin
+							result_dest_3 = rs[num].dest_reg;
+						end
 						
 						result_valid_3 = 1;
 						result_ROB_3 = rs[num].rob_index;
@@ -339,6 +369,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				rs[un].dest_reg = pd_1;
 				rs[un].src_reg_1 = ps1_1;
 				rs[un].src_reg_2 = ps2_1;
+				rs[un].sw_reg = 0;
+				rs[un].sw_ready = 1'b1;
 				
 				//Set source 1 data if possible
 				case (opcode_1)
@@ -350,6 +382,15 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un].src_data_1 = p_rg[ps1_1];
 						rs[un].src1_ready = p_reg_R[ps1_1];
 					end
+					7'b0000011: begin		// LW
+						rs[un].src_data_1 = p_rg[ps1_1];
+						rs[un].src1_ready = p_reg_R[ps1_1];
+					end
+					7'b0100011: begin		// SW
+						rs[un].src_data_1 = p_rg[ps1_1];
+						rs[un].src1_ready = p_reg_R[ps1_1];
+					end
+					
 					default: begin
 						rs[un].src_data_1 = 31'b0;
 						rs[un].src1_ready = 1'b0;
@@ -366,6 +407,16 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					7'b0110011: begin	// ADD, SUB, XOR, SRA
 						rs[un].src_data_2 = p_rg[ps2_1];
 						rs[un].src2_ready = p_reg_R[ps2_1];
+					end
+					7'b0000011: begin		// LW
+						rs[un].src_data_2 = {20'b0, instr_1[31:20]};
+						rs[un].src2_ready = 1'b1;
+					end
+					7'b0100011: begin		// SW
+						rs[un].src_data_2 = {20'b0, instr_1[31:25], instr_1[4:0]};
+						rs[un].src2_ready = 1'b1;
+						rs[un].sw_reg = p_rg[ps2_1];
+						rs[un].sw_ready = p_reg_R[ps2_1];
 					end
 					default: begin
 						rs[un].src_data_2 = 31'b0;
@@ -405,10 +456,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				o_rob_p_1 = o_pd_1;
 				
 				//Mark destination register as not ready
-				p_reg_R[pd_1] = 1'b0;
-				
-
-				
+				if (opcode_1 != 7'b0100011) begin	// Don't do anything if SW
+					p_reg_R[pd_1] = 1'b0;
+				end
 				
 				
 				/////////////// OK NOW DO IT AGAIN :) /////////////////////////
@@ -424,6 +474,8 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				rs[un_2].dest_reg = pd_2;
 				rs[un_2].src_reg_1 = ps1_2;
 				rs[un_2].src_reg_2 = ps2_1;
+				rs[un_2].sw_reg = 0;
+				rs[un_2].sw_ready = 1'b1;
 
 				//Set source 1 data if possible
 				case (opcode_1)
@@ -435,10 +487,19 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un_2].src_data_1 = p_rg[ps1_2];
 						rs[un_2].src1_ready = p_reg_R[ps1_2];
 					end
+					7'b0000011: begin		// LW
+						rs[un_2].src_data_1 = p_rg[ps1_2];
+						rs[un_2].src1_ready = p_reg_R[ps1_2];
+					end
+					7'b0100011: begin		// SW
+						rs[un_2].src_data_1 = p_rg[ps1_2];
+						rs[un_2].src1_ready = p_reg_R[ps1_2];
+					end
 					default: begin
 						rs[un_2].src_data_1 = 31'b0;
 						rs[un_2].src2_ready = 1'b0;
 					end
+					
 				endcase
 					
 				//Set source 2 data/immediate if possible
@@ -450,6 +511,16 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					7'b0110011: begin	// ADD, SUB, XOR, SRA
 						rs[un_2].src_data_2 = p_rg[ps2_2];
 						rs[un_2].src2_ready = p_reg_R[ps2_2];
+					end
+					7'b0000011: begin		// LW
+						rs[un_2].src_data_2 = {20'b0, instr_2[31:20]};
+						rs[un_2].src2_ready = 1'b1;
+					end
+					7'b0100011: begin		// SW
+						rs[un_2].src_data_2 = {20'b0, instr_2[31:25], instr_2[4:0]};
+						rs[un_2].src2_ready = 1'b1;
+						rs[un_2].sw_reg = p_rg[ps2_2];
+						rs[un_2].sw_ready = p_reg_R[ps2_2];
 					end
 					default: begin
 						rs[un_2].src_data_2 = 31'b0;
@@ -481,7 +552,10 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				o_rob_p_2 = o_pd_2;
 				
 				//Mark destination register as not ready
-				p_reg_R[pd_2] = 0;
+				
+				if (opcode_1 != 7'b0100011) begin			// Don't do anything if SW
+					p_reg_R[pd_2] = 1'b0;
+				end
 
 				pd_1_ = pd_1; //to let complete stage know when a new cycle has passed
 				

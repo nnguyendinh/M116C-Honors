@@ -10,10 +10,12 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 
 	import p::rob_row;
 	import p::rat;
+	import p::main_mem;
 
 
 	rob_row rob [16]; //Re-Order Buffer (ROB) table
 	output reg [31:0] p_rg[63:0]; //data to put physical registers in
+	
 	input reg [31:0] tot_instr_count;
 	
 	input en_flag_i;
@@ -91,6 +93,10 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 			p_rg[n] = 0; //all data is initially 0
 		end 
 		
+		for(integer n = 0; n < 256; n = n + 1) begin
+			main_mem[n] = 0; //all memory is initially 0
+		end 
+		
 		prev_pd = 0;
 		prev_flag = 0; //Same as intial flag state 0
 		curr_unused = 0;
@@ -118,6 +124,9 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 			if (rob_op_1 == 7'b0100011) begin //if SW 
 				rob[curr_unused].instr_type = 1; //store to mem
 			end
+			else if (rob_op_1 == 7'b0000011) begin	// if LW
+				rob[curr_unused].instr_type = 2;
+			end
 			else begin
 				rob[curr_unused].instr_type = 0;
 			end
@@ -140,6 +149,9 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 			//let ROB know if writing to register or memory
 			if (rob_op_2 == 7'b0100011) begin //if SW 
 				rob[curr_unused].instr_type = 1; //store to mem
+			end
+			else if (rob_op_2 == 7'b0000011) begin	// if LW
+				rob[curr_unused].instr_type = 2;
 			end
 			else begin
 				rob[curr_unused].instr_type = 0;
@@ -178,8 +190,22 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 				rt_flag_1 = 1;
 				fp_i_1 = rob[rob_top].old_phy;
 				
-				//Overwrite p_regs
-				p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;
+				//Write to p_rg or memory
+				case (rob[rob_top].instr_type)
+					0: begin	// Else
+						p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;
+					end
+					1: begin	// SW
+						main_mem[rob[rob_top].result] = p_rg[rob[rob_top].phy_reg][31:24];
+						main_mem[rob[rob_top].result+1] = p_rg[rob[rob_top].phy_reg][23:16];
+						main_mem[rob[rob_top].result+2] = p_rg[rob[rob_top].phy_reg][15:8];
+						main_mem[rob[rob_top].result+3] = p_rg[rob[rob_top].phy_reg][7:0];
+					end
+					2: begin // LW
+						p_rg[rob[rob_top].phy_reg] = {main_mem[rob[rob_top].result],main_mem[rob[rob_top].result+1],main_mem[rob[rob_top].result+2],main_mem[rob[rob_top].result+3]};
+					end
+				endcase
+
 				
 				//Clear ROB row
 				rob[rob_top] = 0;
@@ -211,7 +237,23 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 
 				rt_flag_2 = 1;
 				fp_i_2 = rob[rob_top].old_phy;	
-				p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;	
+				
+				//Write to p_rg or memory
+				case (rob[rob_top].instr_type)
+					0: begin	// Else
+						p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;
+					end
+					1: begin	// SW
+						main_mem[rob[rob_top].result] = p_rg[rob[rob_top].phy_reg][31:24];
+						main_mem[rob[rob_top].result+1] = p_rg[rob[rob_top].phy_reg][23:16];
+						main_mem[rob[rob_top].result+2] = p_rg[rob[rob_top].phy_reg][15:8];
+						main_mem[rob[rob_top].result+3] = p_rg[rob[rob_top].phy_reg][7:0];
+					end
+					2: begin // LW
+						p_rg[rob[rob_top].phy_reg] = {main_mem[rob[rob_top].result],main_mem[rob[rob_top].result+1],main_mem[rob[rob_top].result+2],main_mem[rob[rob_top].result+3]};
+					end
+				endcase
+				
 				rob[rob_top] = 0;
 				
 				if(rob_top <= 16) begin

@@ -9,6 +9,8 @@ package p;
 		reg [2:0] func3;
 		reg [6:0] func7;
 		reg[5:0] dest_reg;
+		reg[5:0] sw_reg;
+		reg sw_ready;
 		reg[5:0] src_reg_1;
 		reg[31:0] src_data_1;
 		reg src1_ready;
@@ -22,8 +24,8 @@ package p;
 	typedef struct packed {
 		reg v; //know if ROB row is in use
 		//so you know if store to memory or store to register
-		reg instr_type; //not necessarily opcode, just need to know if store to memory or register
-		// 0 --> store to register, 1 --> store to memory
+		reg [1:0] instr_type; //not necessarily opcode, just need to know if store to memory or register
+		// 0 --> store to register, 1 --> store to memory, 2--> load from memory & store to register
 		reg [5:0] phy_reg; //index of destination phy reg (or dest. memory address)
 		reg[31:0] result; //result from ALU
 		reg[31:0] old_phy; //old phy reg
@@ -33,6 +35,7 @@ package p;
 	
 	reg [5:0] rat[31:0]; //RAT - maps 32 architectural registers to physical register
 	//reg [31:0] p_regs[63:0]; //data that physical regs contain
+	reg [7:0] main_mem [255:0];
 endpackage
 	
 
@@ -55,7 +58,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	import p::rat;
 	//import p::p_regs;
 	
-	reg [7:0] mem[127:0];	// Instruction Memory
+	reg [7:0] instr_mem[127:0];	// Instruction Memory
 	reg [31:0] p_regs[63:0]; //data that physical regs contain
 	output reg [31:0] total_instr_count; //total instruction count
 	
@@ -259,14 +262,14 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		end 
 	
 		for(n = 0; n < 128; n = n + 1) begin
-			mem[n] = 0;
+			instr_mem[n] = 0;
 		end
 		
 		total_instr_count = 0;
 
-		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
-		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
-		//$display("Mem: %p", mem);
+		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", instr_mem);
+		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", instr_mem);
+		$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/evaluation-hex.txt", instr_mem);
 		
 		ready = 1;
 		
@@ -276,12 +279,12 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	always @(posedge clk) begin
 		
 		if(ready == 1) begin
-			instr_1 <= {mem[program_counter],mem[program_counter+1],mem[program_counter+2],mem[program_counter+3]};
+			instr_1 <= {instr_mem[program_counter],instr_mem[program_counter+1],instr_mem[program_counter+2],instr_mem[program_counter+3]};
 			if(instr_1 != 0) begin
 				total_instr_count = total_instr_count + 1;
 			end
 			
-			instr_2 <= {mem[program_counter+4],mem[program_counter+5],mem[program_counter+6],mem[program_counter+7]};
+			instr_2 <= {instr_mem[program_counter+4],instr_mem[program_counter+5],instr_mem[program_counter+6],instr_mem[program_counter+7]};
 			if(instr_2 != 0) begin
 				total_instr_count = total_instr_count + 1;
 			end

@@ -103,7 +103,7 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 				ps2_1 = rat[rs2_1];
 				
 				//update RAT
-				if (rd_1 != 0) begin
+				if (rd_1 != 0 && opcode_1 != 7'b0100011) begin // Ignore x0 and SW instructions
 					old_pd_1 = rat[rd_1];
 					rat[rd_1] = free_p;
 					//update value in "free pool" (actually list of all free_pool)
@@ -137,7 +137,7 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 				ps2_2 = rat[rs2_2];
 				
 				//update RAT
-				if (rd_2 != 0) begin
+				if (rd_2 != 0 && opcode_2 != 7'b0100011) begin	// Ignore x0 and SW instructions
 					old_pd_2 = rat[rd_2];
 					rat[rd_2] = free_p;
 					//update value in "free pool" (actually list of all free_pool)

@@ -52,6 +52,7 @@ module ALU(opcode, func3, func7, source_1, source_2, pd, result);
 
 					endcase
 				end
+				
 				7'b0010011: begin
 					if (func3 == 3'b000) begin									// ADDI
 						result = source_1 + source_2;
@@ -60,7 +61,16 @@ module ALU(opcode, func3, func7, source_1, source_2, pd, result);
 					else if (func3 == 3'b111) begin							// ANDI
 						result = source_1 & source_2;
 					end
-				end	
+				end
+				
+				7'b0000011: begin		// LW
+					result = source_1 + source_2;
+				end
+				
+				7'b0100011: begin		// SW
+					result = source_1 + source_2;
+				end
+	
 			endcase
 		end		
 	end
