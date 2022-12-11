@@ -306,6 +306,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			*/
 			
 			$display("Instr: %b", instr_1);
+			$display("Instr: %b", instr_2);
 			program_counter = program_counter + 8;
 
 		end

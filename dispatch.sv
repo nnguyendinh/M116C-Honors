@@ -413,7 +413,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un].src2_ready = 1'b1;
 					end
 					7'b0100011: begin		// SW
-						rs[un].src_data_2 = {20'b0, instr_1[31:25], instr_1[4:0]};
+						rs[un].src_data_2 = {20'b0, instr_1[31:25], instr_1[11:7]};
 						rs[un].src2_ready = 1'b1;
 						rs[un].sw_reg = p_rg[ps2_1];
 						rs[un].sw_ready = p_reg_R[ps2_1];
@@ -478,7 +478,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				rs[un_2].sw_ready = 1'b1;
 
 				//Set source 1 data if possible
-				case (opcode_1)
+				case (opcode_2)
 					7'b0010011: begin	// ADDI & ANDI
 						rs[un_2].src_data_1 = p_rg[ps1_2];
 						rs[un_2].src1_ready = p_reg_R[ps1_2];
@@ -503,7 +503,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 				endcase
 					
 				//Set source 2 data/immediate if possible
-				case (opcode_1)
+				case (opcode_2)
 					7'b0010011: begin	// ADDI & ANDI
 						rs[un_2].src_data_2 = {20'b0, instr_2[31:20]};
 						rs[un_2].src2_ready = 1'b1;
@@ -517,7 +517,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						rs[un_2].src2_ready = 1'b1;
 					end
 					7'b0100011: begin		// SW
-						rs[un_2].src_data_2 = {20'b0, instr_2[31:25], instr_2[4:0]};
+						rs[un_2].src_data_2 = {20'b0, instr_2[31:25], instr_2[11:7]};
 						rs[un_2].src2_ready = 1'b1;
 						rs[un_2].sw_reg = p_rg[ps2_2];
 						rs[un_2].sw_ready = p_reg_R[ps2_2];
