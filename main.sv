@@ -42,7 +42,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
 						ps1_dii_1, ps2_dii_1, pd_dii_1, ps1_dii_2, ps2_dii_2, pd_dii_2,
 						retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pr_flag,
-						retire_index_1, retire_result_1, retire_index_2, retire_result_2); 
+						retire_index_1, retire_result_1, retire_index_2, retire_result_2, total_instr_count); 
 
 	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -57,6 +57,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	reg [7:0] mem[127:0];	// Instruction Memory
 	reg [31:0] p_regs[63:0]; //data that physical regs contain
+	output reg [31:0] total_instr_count; //total instruction count
 	
 	// Decode Stage Regs
 	//reg enable_flag = 0;
@@ -246,27 +247,22 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 									update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
 									forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
 									o_rob_p_reg_1, o_rob_p_reg_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pd_1_ci, pr_flag,
-									retire_index_1, retire_result_1, retire_index_2, retire_result_2);
+									retire_index_1, retire_result_1, retire_index_2, retire_result_2, p_regs, total_instr_count);
 	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
 	
 		//loop so that all rat values are assigned to p1 to p32 and first 32 free_pool are also all 1
 		integer n;
-
-		
 		for(n = 0; n < 32; n = n + 1) begin
 			rat[n] = n;
-			p_regs[n] = 0;
 		end 
-
-		for(n = 32; n < 64; n = n + 1) begin
-			p_regs[n] = 0;
-		end
 	
 		for(n = 0; n < 128; n = n + 1) begin
 			mem[n] = 0;
 		end
+		
+		total_instr_count = 0;
 
 		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", mem);
 		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", mem);
@@ -281,7 +277,16 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		
 		if(ready == 1) begin
 			instr_1 <= {mem[program_counter],mem[program_counter+1],mem[program_counter+2],mem[program_counter+3]};
+			if(instr_1 != 0) begin
+				total_instr_count = total_instr_count + 1;
+			end
+			
 			instr_2 <= {mem[program_counter+4],mem[program_counter+5],mem[program_counter+6],mem[program_counter+7]};
+			if(instr_2 != 0) begin
+				total_instr_count = total_instr_count + 1;
+			end
+			
+			$display("TOTAL COUNT: %d", total_instr_count);
 			
 			if (instr_1 == 0) begin
 				en_flag_di <= 0;
@@ -385,16 +390,6 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		$display("pd_dii_1: %d", pd_dii_1);
 		$display("pd_dii_2: %d", pd_dii_2);
 		*/
-		
-		//Writebacks from retire stage
-		if(retire_flag_1 == 1) begin
-			p_regs[retire_index_1] = retire_result_1;
-		end
-		
-		if(retire_flag_2 == 1) begin
-			p_regs[retire_index_2] = retire_result_2;
-		end
-		
 	end
 	
 endmodule

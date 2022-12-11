@@ -66,6 +66,7 @@ module rename(en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1
 	
 	end
 	
+	
 	always@(*) begin
 	
 		$display("Rename enabled: %b", en_flag_i);

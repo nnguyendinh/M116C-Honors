@@ -135,7 +135,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		end 
 		
 		for(integer n = 0; n < 64; n = n + 1) begin
-			p_reg_R[n] = 1;
+			p_reg_R[n] = 1; //all physical registers are intially ready
 		end 
 		
 		prev_pd_1 = 0; //set to any value not equal to initial pd_1

@@ -6,13 +6,15 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 									u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, 
 									f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
 									o_rob_p_1, o_rob_p_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, pd_i, prev_flag,
-									rt_index_1, rt_result_1, rt_index_2, rt_result_2);
+									rt_index_1, rt_result_1, rt_index_2, rt_result_2, p_rg, tot_instr_count);
 
 	import p::rob_row;
 	import p::rat;
 
 
 	rob_row rob [16]; //Re-Order Buffer (ROB) table
+	output reg [31:0] p_rg[63:0]; //data to put physical registers in
+	input reg [31:0] tot_instr_count;
 	
 	input en_flag_i;
 	input [31:0] result_1;
@@ -75,6 +77,8 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	integer rob_found;
 	integer rob_top; //index that represents the first instruction that should be popped
 	integer rat_found;
+	integer curr_unused; //next unused row in the ROB stack
+	reg [31:0] instr_retired; //total number of instructions retired
 	//integer prev_flag;
 
 	initial begin
@@ -83,8 +87,14 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 			rob[n].v = 0;
 		end
 		
+		for(integer n = 0; n < 64; n = n + 1) begin
+			p_rg[n] = 0; //all data is initially 0
+		end 
+		
 		prev_pd = 0;
 		prev_flag = 0; //Same as intial flag state 0
+		curr_unused = 0;
+		instr_retired = 0;
 	end
 	
 	always@(*) begin
@@ -101,50 +111,52 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 			
 			//Actually, shouldn't try to find first unused ROB row but rather
 			//just the next in the stack
-			rob_found = 0; 
-			for(integer n = 0; n < 16; n = n + 1) begin
-				if (rob[n].v != 1 && rob_found == 0) begin
-				
-					rob[n].v = 1'b1;
+	
+			rob[curr_unused].v = 1'b1;
+	
+			//let ROB know if writing to register or memory
+			if (rob_op_1 == 7'b0100011) begin //if SW 
+				rob[curr_unused].instr_type = 1; //store to mem
+			end
+			else begin
+				rob[curr_unused].instr_type = 0;
+			end
 			
-					//let ROB know if writing to register or memory
-					if (rob_op_1 == 7'b0100011) begin //if SW 
-						rob[n].instr_type = 1; //store to mem
-					end
-					else begin
-						rob[n].instr_type = 0;
-					end
-					
-					rob[n].phy_reg = rob_p_1;
-					rob[n].old_phy = o_rob_p_1;
-				
-					rob_found = 1;
-				end
+			rob[curr_unused].phy_reg = rob_p_1;
+			rob[curr_unused].old_phy = o_rob_p_1;
+
+			
+			//Update currently unused to next row
+			if(curr_unused < 16) begin 
+				curr_unused = curr_unused + 1; //move curr_unused up by one
+			end
+			else begin //go back to top of ROB array (circular)
+				curr_unused = 0;
 			end
 			
 			//Same code but for second instruction to ROB
-			rob_found = 0;
-			for(integer n = 0; n < 16; n = n + 1) begin
-				if (rob[n].v != 1 && rob_found == 0) begin
-				
-					rob[n].v = 1'b1;
-			
-					//let ROB know if writing to register or memory
-					if (rob_op_2 == 7'b0100011) begin //if SW 
-						rob[n].instr_type = 1; //store to mem
-					end
-					else begin
-						rob[n].instr_type = 0;
-					end
-					
-					rob[n].phy_reg = rob_p_2;
-					rob[n].old_phy = o_rob_p_2;
-				
-					rob_found = 1;
-				end
+			rob[curr_unused].v = 1'b1;
+	
+			//let ROB know if writing to register or memory
+			if (rob_op_2 == 7'b0100011) begin //if SW 
+				rob[curr_unused].instr_type = 1; //store to mem
 			end
+			else begin
+				rob[curr_unused].instr_type = 0;
+			end
+			
+			rob[curr_unused].phy_reg = rob_p_2;
+			rob[curr_unused].old_phy = o_rob_p_2;
+			
+			if(curr_unused < 16) begin 
+				curr_unused = curr_unused + 1; //move curr_unused up by one
+			end
+			else begin //go back to top of ROB array (circular)
+				curr_unused = 0;
+			end
+					
 		
-			$display("New prev flag: %b", prev_flag);
+			//$display("New prev flag: %b", prev_flag);
 			
 			for(integer n = 0; n < 16; n = n + 1) begin
 				$display("Up ROB Line %d: %b, %b, %d, %d, %d, %d, %d", n, rob[n].v, 
@@ -166,17 +178,8 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 				rt_flag_1 = 1;
 				fp_i_1 = rob[rob_top].old_phy;
 				
-				//Search RAT for the architectural register?
-				rat_found = 0;
-				for(integer n = 0; n < 32; n = n + 1) begin
-					if(rat[n] == rob[rob_top].phy_reg && rat_found == 0) begin
-						//Write to the register
-						//p_regs[n] = rob[rob_top].result;
-						rt_index_1 = n;
-						rt_result_1 = rob[rob_top].result;
-						rat_found = 1;
-					end
-				end		
+				//Overwrite p_regs
+				p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;
 				
 				//Clear ROB row
 				rob[rob_top] = 0;
@@ -187,6 +190,13 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 				end
 				else begin
 					rob_top = 0; //go back to beginning of the array
+				end
+				
+				instr_retired = instr_retired + 1;
+				
+				//Stop program is you've retired all instructions
+				if(instr_retired == tot_instr_count) begin
+					$stop;
 				end
 				
 				$display("Rob top after 1st retire: %d", rob_top);
@@ -200,19 +210,8 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 			if(rob[rob_top].comp == 1) begin
 
 				rt_flag_2 = 1;
-				fp_i_2 = rob[rob_top].old_phy;
-				
-				rat_found = 0;
-				for(integer n = 0; n < 32; n = n + 1) begin
-					if(rat[n] == rob[rob_top].phy_reg && rat_found == 0) begin
-						//Write to the register
-						//p_regs[n] = rob[rob_top].result;
-						rt_index_2 = n;
-						rt_result_2 = rob[rob_top].result;
-						rat_found = 1;
-					end
-				end		
-				
+				fp_i_2 = rob[rob_top].old_phy;	
+				p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;	
 				rob[rob_top] = 0;
 				
 				if(rob_top <= 16) begin
@@ -220,6 +219,12 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 				end
 				else begin
 					rob_top = 0; //go back to beginning of the array
+				end
+				
+				instr_retired = instr_retired + 1;
+				
+				if(instr_retired == tot_instr_count) begin
+					$stop;
 				end
 				
 				$display("Rob top after 2nd retire: %d", rob_top);
@@ -337,6 +342,7 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 		
 	end
 	
+	
 	else if (en_flag_i == 0) begin
 	
 		$stop;
@@ -355,6 +361,7 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 		rt_flag_2 = 0;
 		
 	end
+	
 
 		en_flag_o = en_flag_i;
 	end
