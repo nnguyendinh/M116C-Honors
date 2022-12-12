@@ -37,7 +37,7 @@ module ALU(opcode, func3, func7, source_1, source_2, pd, result);
 							end
 							
 							else if (func3 == 3'b100) begin 					// XOR
-								result = source_1 + source_2;
+								result = source_1 ^ source_2;
 							end
 						end
 						7'b0100000: begin

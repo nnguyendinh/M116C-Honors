@@ -57,20 +57,22 @@ module rename(PC1_i, PC2_i, c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, r
 	output reg [6:0] PC1_o;
 	output reg [6:0] PC2_o;
 	
+	reg [31:0] prev_cyc;
 	integer n;
 	integer found_free;
 	integer free_p;
 	
 	initial begin
-	
-			for(n = 0; n < 32; n = n + 1) begin
-				free_pool[n] = 1;
-			end 
+		
+		for(n = 0; n < 32; n = n + 1) begin
+			free_pool[n] = 1;
+		end 
 
-			for(n = 32; n < 64; n = n + 1) begin
-				free_pool[n] = 0;
-			end
-	
+		for(n = 32; n < 64; n = n + 1) begin
+			free_pool[n] = 0;
+		end
+		
+		prev_cyc = 0;
 	end
 	
 	
@@ -90,11 +92,12 @@ module rename(PC1_i, PC2_i, c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, r
 				if(rt_flag_2 == 1) begin
 					free_pool[fp_i_2] = 1;
 				end
-			
+				
 			end 
 			
-			else begin
+			if(prev_cyc != c_i) begin
 				//Rename stuff////////////////////////////////////////////////////
+				prev_cyc = c_i;
 				found_free = 0;
 				free_p = 0;
 				
@@ -167,6 +170,12 @@ module rename(PC1_i, PC2_i, c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, r
 					$display("free_pool[%d]: %b", n, free_pool[n]); 
 				end
 				*/	
+				
+				$display("RAT at end of rename: %d", c_i);
+				for(integer n = 0; n < 32; n = n + 1) begin
+					$display("register x%d: %d", n, rat[n]);
+				end
+				
 			end
 		end
 		

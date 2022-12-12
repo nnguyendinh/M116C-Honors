@@ -138,7 +138,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 	reg instr_found_3 = 0;
 	rob_row dum;
 	rob_row dum2;
-
+	reg [31:0] up_p_rg[63:0]; //updated data to put physical registers in
 	
 	
 	reg RS_filled = 0;
@@ -171,14 +171,13 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 		//$display("Dispatch enabled: %b", en_flag_i);
 		
 		if(en_flag_i == 1/* || RS_filled == 1*/) begin
-			//$display("initial pd_1: %d", pd_1);
-			//$display("initial pd_2: %d", pd_2);
 			
 			//Update p_reg_R from complete stage
-			if(f_flag_1 == 1) begin
+			if(f_flag_1 == 1 && dest_r_1 != 0) begin
 				p_reg_R[dest_r_1] = 1;
+				up_p_rg[dest_r_1] = f_data_1;
 				
-				$display("Updating any src reg 1: %d", dest_r_1);
+				$display("Updating any src reg 1: %d with value: %d in cycle %d", dest_r_1, f_data_1, c_i);
 				
 				//Update source registers from data forwarded from complete stage
 				for(integer n = 0; n < 16; n = n + 1) begin
@@ -199,10 +198,11 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 				
 			end
 		
-			if(f_flag_2 == 1) begin
+			if(f_flag_2 == 1 && dest_r_2 != 0) begin
 				p_reg_R[dest_r_2] = 1;
+				up_p_rg[dest_r_2] = f_data_2;
 				
-				$display("Updating any src reg 2: %d", dest_r_2);
+				$display("Updating any src reg 1: %d with value: %d in cycle %d", dest_r_2, f_data_2, c_i);
 				
 				for(integer n = 0; n < 16; n = n + 1) begin
 					if (rs[n].src_reg_1 == dest_r_2 && rs[n].src1_ready != 1) begin
@@ -221,8 +221,9 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 				end
 			end 
 			
-			if(f_flag_3 == 1) begin
+			if(f_flag_3 == 1 && dest_r_3 != 0) begin
 				p_reg_R[dest_r_3] = 1;
+				up_p_rg[dest_r_3] = f_data_3;
 				
 				$display("Updating any src reg 3: %d", dest_r_3);
 				
@@ -272,6 +273,14 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 				//$display("2nd RS line found: %d",un_2);
 				
 				// Issue/Fire Stage////////////////////////////////////////////////
+				
+				$display("RS before Issue in cycle %d", c_i);
+				for(integer n = 0; n < 16; n = n + 1) begin
+					$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
+							rs[n].op, rs[n].func3, rs[n].func7, rs[n].pc, rs[n].dest_reg, rs[n].src_reg_1,
+							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
+							rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
+				end
 				
 				result_valid_1 = 0;
 				result_valid_2 = 0;
@@ -382,6 +391,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 					end
 				end
 				
+				/*
 				$display("RS after Issue");
 				for(integer n = 0; n < 16; n = n + 1) begin
 					$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
@@ -389,6 +399,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
 							rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
 				end
+				*/
 
 				//Rest of Dispatch stage ///////////////////////////////////////////////
 				if(instr_disp <= tot_instr_count) begin
@@ -405,6 +416,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 					rs[un].src_reg_2 = ps2_1;
 					rs[un].sw_reg = 0;
 					rs[un].sw_ready = 1'b1;
+					
 					
 					//Set source 1 data if possible
 					case (opcode_1)
@@ -436,10 +448,15 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 						rs[un_2].src1_ready = 1'b1;
 					end
 					
+					if(up_p_rg[rs[un].src_reg_1] >= 0) begin //basically if it's a non-null value
+						rs[un].src_data_1 = up_p_rg[rs[un].src_reg_1];
+					end
+					
 					//Set source 2 data/immediate if possible
 					case (opcode_1)
 						7'b0010011: begin	// ADDI & ANDI
 							rs[un].src_data_2 = {20'b0, instr_1[31:20]};
+							rs[un].src_reg_2 = 0; //Make source register 0 to avoid inaccurate updates from complete
 							rs[un].src2_ready = 1'b1;
 						end
 						7'b0110011: begin	// ADD, SUB, XOR, SRA
@@ -467,8 +484,12 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 						rs[un].src2_ready = 1'b1;
 					end
 					
+					if(up_p_rg[rs[un].src_reg_2] >= 0) begin //basically if it's a non-null value
+						rs[un].src_data_2 = up_p_rg[rs[un].src_reg_2];
+					end
 					
-				//determine fu_index from opcode
+					
+				   //determine fu_index from opcode
 					if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is SW or LW
 						rs[un].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
 					end
@@ -554,10 +575,15 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 						rs[un_2].src1_ready = 1'b1;
 					end
 						
+					if(up_p_rg[rs[un_2].src_reg_1] >= 0) begin //basically if it's a non-null value
+						rs[un_2].src_data_1 = up_p_rg[rs[un_2].src_reg_1];
+					end	
+						
 					//Set source 2 data/immediate if possible
 					case (opcode_2)
 						7'b0010011: begin	// ADDI & ANDI
 							rs[un_2].src_data_2 = {20'b0, instr_2[31:20]};
+							rs[un_2].src_reg_2 = 0;
 							rs[un_2].src2_ready = 1'b1;
 						end
 						7'b0110011: begin	// ADD, SUB, XOR, SRA
@@ -583,6 +609,10 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 					
 					if (ps2_2 == 0) begin
 						rs[un_2].src2_ready = 1'b1;
+					end
+					
+					if(up_p_rg[rs[un_2].src_reg_2] >= 0) begin //basically if it's a non-null value
+						rs[un_2].src_data_2 = up_p_rg[rs[un_2].src_reg_2];
 					end
 							
 					
@@ -621,7 +651,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 					instr_disp = instr_disp + 1;
 					
 					//Display entire reservation station
-					$display("RS after Dispatch");
+					$display("RS after Dispatch in cycle %d", c_i);
 					for(integer n = 0; n < 16; n = n + 1) begin
 						$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
 								rs[n].op, rs[n].func3, rs[n].func7, rs[n].pc, rs[n].dest_reg, rs[n].src_reg_1,

@@ -300,8 +300,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		total_instr_count = 0;
 		cycle_count = 0;
 
-		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", instr_mem);
-		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/evaluation-hex.txt", instr_mem);
+		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", instr_mem);
+		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/evaluation-hex.txt", instr_mem);
 		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", instr_mem);
 		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/evaluation-hex.txt", instr_mem);
 		
@@ -350,11 +350,11 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			$display("Instr: %b", instr_2);
 			program_counter = program_counter + 8;
 			
-			/*
+			
 			if (program_counter >= 160) begin
 				$stop;
 			end
-			*/
+			
 
 		end
 	end

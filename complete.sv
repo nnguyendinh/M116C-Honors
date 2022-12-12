@@ -89,6 +89,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 	integer rat_found;
 	integer curr_unused; //next unused row in the ROB stack
 	reg [31:0] instr_retired; //total number of instructions retired
+
 	//integer prev_flag;
 
 	initial begin
@@ -180,12 +181,14 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 		
 			//$display("New prev flag: %b", prev_flag);
 			
+			/*
 			$display("ROB Update from dispatch");
 			for(integer n = 0; n < 16; n = n + 1) begin
 				$display("ROB Line %d: valid:%b, type:%b, pc:%h, reg:%d, result:%d, old phy:%d, old result:%d, comp:%d", n, rob[n].v, 
 						rob[n].instr_type, rob[n].pc, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,
 						rob[n].comp);
 			end
+			*/
 		end
 		
 		
@@ -206,19 +209,21 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 				case (rob[rob_top].instr_type)
 					0: begin	// Else
 						p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;
+						$display("Writing %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
 					end
 					1: begin	// SW
 						main_mem[rob[rob_top].result] = p_rg[rob[rob_top].phy_reg][31:24];
 						main_mem[rob[rob_top].result+1] = p_rg[rob[rob_top].phy_reg][23:16];
 						main_mem[rob[rob_top].result+2] = p_rg[rob[rob_top].phy_reg][15:8];
 						main_mem[rob[rob_top].result+3] = p_rg[rob[rob_top].phy_reg][7:0];
+						$display("Writing mem to p_reg[%d] in cycle %d", rob[rob_top].result, rob[rob_top].phy_reg, c_i);
 					end
 					2: begin // LW
 						p_rg[rob[rob_top].phy_reg] = {main_mem[rob[rob_top].result],main_mem[rob[rob_top].result+1],main_mem[rob[rob_top].result+2],main_mem[rob[rob_top].result+3]};
+						$display("Writing %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
 					end
 				endcase
 
-				
 				//Clear ROB row
 				rob[rob_top] = 0;
 				
@@ -263,15 +268,18 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 				case (rob[rob_top].instr_type)
 					0: begin	// Else
 						p_rg[rob[rob_top].phy_reg] = rob[rob_top].result;
+						$display("Writing %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
 					end
 					1: begin	// SW
 						main_mem[rob[rob_top].result] = p_rg[rob[rob_top].phy_reg][31:24];
 						main_mem[rob[rob_top].result+1] = p_rg[rob[rob_top].phy_reg][23:16];
 						main_mem[rob[rob_top].result+2] = p_rg[rob[rob_top].phy_reg][15:8];
 						main_mem[rob[rob_top].result+3] = p_rg[rob[rob_top].phy_reg][7:0];
+						$display("Writing mem to p_reg[%d] in cycle %d", rob[rob_top].result, rob[rob_top].phy_reg, c_i);
 					end
 					2: begin // LW
 						p_rg[rob[rob_top].phy_reg] = {main_mem[rob[rob_top].result],main_mem[rob[rob_top].result+1],main_mem[rob[rob_top].result+2],main_mem[rob[rob_top].result+3]};
+						$display("Writing %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
 					end
 				endcase
 				
@@ -306,8 +314,12 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 				rt_flag_2 = 0;
 			end
 			
-		
 			
+			$display("Register value at end of retire: %d", c_i);
+			for(integer n = 32; n < 64; n = n + 1) begin
+				$display("register x%d: %d", n, p_rg[n]);
+			end
+					
 			//actual complete stage stuff///////////////////////////////////////////////////////
 			if(result_valid_1 == 1) begin
 				
