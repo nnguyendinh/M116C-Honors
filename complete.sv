@@ -77,6 +77,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 	output reg prev_flag;
 	
 	output reg en_flag_o;
+	reg [31:0] prev_cyc;
 	
 	input [5:0] pd_i;
 
@@ -105,6 +106,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 		end 
 		
 		prev_pd = 0;
+		prev_cyc = 0;
 		prev_flag = 0; //Same as intial flag state 0
 		curr_unused = 0;
 		instr_retired = 0;
@@ -187,9 +189,10 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 		end
 		
 		
-		if(prev_pd != pd_i) begin //if it's a new cycle
+		if(prev_cyc != c_i) begin //if it's a new cycle
 		
-			prev_pd = pd_i;
+			//prev_pd = pd_i;
+			prev_cyc = c_i;
 			//Retire stage//////////////////////////////////////////////////////////////////////
 			
 			//retire up 1st instruction if possible
@@ -231,6 +234,15 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 				
 				//Stop program is you've retired all instructions
 				if(instr_retired == tot_instr_count) begin
+					$display("FINAL REGISTER VALUES");
+					for(integer n = 0; n < 32; n = n + 1) begin
+						$display("register x%d: %d", n, p_rg[rat[n]]);
+					end
+							
+					for(integer n = 0; n < 32; n = n + 1) begin
+						$display("memory address %h: %d", n, main_mem[n]);
+					end    
+					
 					$stop;
 				end
 				
@@ -275,6 +287,16 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 				instr_retired = instr_retired + 1;
 				
 				if(instr_retired == tot_instr_count) begin
+					$display("FINAL REGISTER VALUES");
+					for(integer n = 0; n < 32; n = n + 1) begin
+						$display("register x%d: %d", n, p_rg[rat[n]]);
+					end
+							
+					for(integer n = 0; n < 32; n = n + 1) begin
+						$display("memory address %h: %d", n, main_mem[n]);
+					end   
+					
+					
 					$stop;
 				end
 				
