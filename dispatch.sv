@@ -1,13 +1,13 @@
 `timescale 1 ns / 1 ns 
 
-module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, 
+module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, 
 						opcode_2, func3_2, func7_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, en_flag_o,
 						result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1,
 						result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2,
 						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, 
 						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2,
 						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg, clock);
+						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg, clock, c_o);
 						
 	//import p::p_reg_R;
 	import p::rs_row;
@@ -82,6 +82,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	input [5:0] o_pd_2;
 	output reg [5:0] pd_1_;
 	
+	input [31:0] c_i;
+	output reg [31:0] c_o;
+	
 	//Outside of the pipeline
 	
 	//Outputs to ROB
@@ -107,6 +110,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		
 	reg [4:0] un; //index of first unused
 	reg [4:0] un_2; //index of second unused
+	reg [31:0] prev_cyc;
 	integer rob_un;
 	integer rob_un_2;
 	reg switch = 0;
@@ -142,6 +146,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		end 
 		
 		prev_pd_1 = 0; //set to any value not equal to initial pd_1
+		prev_cyc = 0;
 		u_rob = 0;
 	end
 	
@@ -229,11 +234,12 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 			//$display("Dispatch pd_1: %d", pd_1);
 			//$display("Dispatch prev_pd: %d", prev_pd_1);
 
-			if(prev_pd_1 != pd_1) begin //make sure it's a different cycle
+			if(prev_cyc != c_i) begin //make sure it's a different cycle
 			
 				//Actual Dispatch/fire stuff////////////////////////////////////////
 				$display("Dispatch stage enabled");
-				prev_pd_1 = pd_1;
+				//prev_pd_1 = pd_1;
+				prev_cyc = c_i;
 				rs_found = 0;
 				
 				// Find first two unused rows in the RS
@@ -610,6 +616,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		end
 		
 		en_flag_o = (en_flag_i/* || RS_filled*/);
+		c_o = c_i;
 	end
 
 endmodule

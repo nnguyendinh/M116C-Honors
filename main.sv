@@ -45,7 +45,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
 						ps1_dii_1, ps2_dii_1, pd_dii_1, ps1_dii_2, ps2_dii_2, pd_dii_2,
 						retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pr_flag,
-						retire_index_1, retire_result_1, retire_index_2, retire_result_2, total_instr_count); 
+						retire_index_1, retire_result_1, retire_index_2, retire_result_2, total_instr_count, cycle_count, c_dii); 
 
 	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -61,6 +61,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	reg [7:0] instr_mem[127:0];	// Instruction Memory
 	reg [31:0] p_regs[63:0]; //data that physical regs contain
 	output reg [31:0] total_instr_count; //total instruction count
+	output reg [31:0] cycle_count;
 	
 	// Decode Stage Regs
 	//reg enable_flag = 0;
@@ -219,32 +220,40 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	reg en_flag_co;
 	
+	reg[31:0] c_di;
+	reg[31:0] c_do;
+	reg[31:0] c_ri;
+	reg[31:0] c_ro;
+	output reg[31:0] c_dii;
+	reg[31:0] c_dio;
+	reg[31:0] c_ci;
+	
 	
 	integer program_counter = 0;
 	integer ready = 0; //flag to start always block
 	
 	//Decode stage
-	decode dec(en_flag_di, instr_1, opcode_do_1, func3_do_1, func7_do_1, rs1_do_1, rs2_do_1, rd_do_1, instr_do_1, 
-					instr_2, opcode_do_2, func3_do_2, func7_do_2, rs1_do_2, rs2_do_2, rd_do_2, instr_do_2, en_flag_do);
+	decode dec(c_di, en_flag_di, instr_1, opcode_do_1, func3_do_1, func7_do_1, rs1_do_1, rs2_do_1, rd_do_1, instr_do_1, 
+					instr_2, opcode_do_2, func3_do_2, func7_do_2, rs1_do_2, rs2_do_2, rd_do_2, instr_do_2, en_flag_do, c_do);
 	
 	//Rename stage
-	rename ren(en_flag_ri, opcode_ri_1, func3_ri_1, func7_ri_1, rs1_ri_1, rs2_ri_1, rd_ri_1, instr_ri_1, opcode_ro_1, func3_ro_1, func7_ro_1, ps1_ro_1, ps2_ro_1, pd_ro_1, instr_ro_1,
+	rename ren(c_ri, en_flag_ri, opcode_ri_1, func3_ri_1, func7_ri_1, rs1_ri_1, rs2_ri_1, rd_ri_1, instr_ri_1, opcode_ro_1, func3_ro_1, func7_ro_1, ps1_ro_1, ps2_ro_1, pd_ro_1, instr_ro_1,
 					opcode_ri_2, func3_ri_2, func7_ri_2, rs1_ri_2, rs2_ri_2, rd_ri_2, instr_ri_2, opcode_ro_2, func3_ro_2, func7_ro_2, ps1_ro_2, ps2_ro_2, pd_ro_2, instr_ro_2, en_flag_ro,
-					old_pd_ro_1, old_pd_ro_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2);
+					old_pd_ro_1, old_pd_ro_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, c_ro);
 					
 	//Dispatch stage
-	dispatch disp(en_flag_dii, opcode_dii_1, func3_dii_1, func7_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, 
+	dispatch disp(c_dii, en_flag_dii, opcode_dii_1, func3_dii_1, func7_dii_1, ps1_dii_1, ps2_dii_1, pd_dii_1, instr_dii_1, rs_line_dio_1, 
 						opcode_dii_2, func3_dii_2, func7_dii_2, ps1_dii_2, ps2_dii_2, pd_dii_2, instr_dii_2, rs_line_dio_2, en_flag_dio,
 						result_d1, result_dest_d1, result_valid_d1, result_ROB_d1, result_FU_d1, 
 						result_d2, result_dest_d2, result_valid_d2, result_ROB_d2, result_FU_d2,
 						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3, 
 						update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
-						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio, p_regs, clk);
+						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio, p_regs, clk, c_dio);
 	
 	//Complete stage
 	
-	complete comp(en_flag_ci, result_c1, result_dest_c1, result_valid_c1, result_ROB_c1, result_FU_c1, 
+	complete comp(c_ci, en_flag_ci, result_c1, result_dest_c1, result_valid_c1, result_ROB_c1, result_FU_c1, 
 									result_c2, result_dest_c2, result_valid_c2, result_ROB_c2, result_FU_c2,
 									result_c3, result_dest_c3, result_valid_c3, result_ROB_c3, result_FU_c3, en_flag_co, 
 									update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
@@ -266,10 +275,12 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		end
 		
 		total_instr_count = 0;
+		cycle_count = 0;
 
 		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", instr_mem);
+		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/evaluation-hex.txt", instr_mem);
 		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", instr_mem);
-		$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/evaluation-hex.txt", instr_mem);
+		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/evaluation-hex.txt", instr_mem);
 		
 		ready = 1;
 		
@@ -279,6 +290,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	always @(posedge clk) begin
 		
 		if(ready == 1) begin
+			
+			cycle_count = cycle_count + 1;
+			c_di <= cycle_count;
+			
 			instr_1 <= {instr_mem[program_counter],instr_mem[program_counter+1],instr_mem[program_counter+2],instr_mem[program_counter+3]};
 			if(instr_1 != 0) begin
 				total_instr_count = total_instr_count + 1;
@@ -292,7 +307,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			$display("TOTAL COUNT: %d", total_instr_count);
 			
 			if (instr_1 == 0) begin
-				en_flag_di <= 0;
+				en_flag_di <= 1;
 			end
 			
 			else begin
@@ -318,6 +333,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	//Pipeline between decode and rename
 	always @(posedge clk) begin
+		c_ri <= c_do;
 		en_flag_ri <= en_flag_do;
 		opcode_ri_1 <= opcode_do_1;
 		func3_ri_1 <= func3_do_1;
@@ -340,6 +356,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 					
 	//Pipeline between rename and dispatch
 	always @(posedge clk) begin
+		c_dii <= c_ro;
 		en_flag_dii <= en_flag_ro;
 		opcode_dii_1 <= opcode_ro_1;
 		func3_dii_1 <= func3_ro_1;
@@ -365,7 +382,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	//Pipeline between dispatch/issue and complete
 	always @(posedge clk) begin
-	
+		c_ci <= c_dio;
 		en_flag_ci <= en_flag_dio;
 		pd_1_ci <= pd_1_dio;
 		

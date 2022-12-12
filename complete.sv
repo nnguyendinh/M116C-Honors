@@ -1,6 +1,6 @@
 `timescale 1 ns / 1 ns 
 
-module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1, 
+module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1, 
 									result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2,
 									result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, en_flag_o, 
 									u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, 
@@ -17,7 +17,7 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 	output reg [31:0] p_rg[63:0]; //data to put physical registers in
 	
 	input reg [31:0] tot_instr_count;
-	
+	input reg [31:0] c_i;
 	input en_flag_i;
 	input [31:0] result_1;
 	input [31:0] result_2;
@@ -384,12 +384,13 @@ module complete(en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1
 		
 	end
 	
-	
+	/*
 	else if (en_flag_i == 0) begin
 	
 		$stop;
 		
 	end
+	*/
 	
 	else begin
 		
