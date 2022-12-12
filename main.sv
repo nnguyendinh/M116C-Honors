@@ -240,7 +240,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3, 
 						update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2,
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
-						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio, p_regs);
+						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio, p_regs, clk);
 	
 	//Complete stage
 	
@@ -308,6 +308,10 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			$display("Instr: %b", instr_1);
 			$display("Instr: %b", instr_2);
 			program_counter = program_counter + 8;
+			
+			if (program_counter >= 160) begin
+				$stop;
+			end
 
 		end
 	end

@@ -7,7 +7,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, 
 						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2,
 						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg);
+						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg, clock);
 						
 	//import p::p_reg_R;
 	import p::rs_row;
@@ -122,6 +122,9 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 	rob_row dum;
 	rob_row dum2;
 	reg [5:0] prev_pd_1;
+	
+	reg RS_filled = 0;
+	input clock;
 
 	ALU fu_1(ALU_opcode_1, ALU_func3_1, ALU_func7_1, ALU_source_1_1, ALU_source_2_1, result_dest_1, result_1);
 	ALU fu_2(ALU_opcode_2, ALU_func3_2, ALU_func7_2, ALU_source_1_2, ALU_source_2_2, result_dest_2, result_2);
@@ -149,7 +152,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 		//$display("Dispatch enabled: %b", en_flag_i);
 		//$display("Prev pd 1:, %d", prev_pd_1);
 		
-		if(en_flag_i == 1) begin
+		if(en_flag_i == 1/* || RS_filled == 1*/) begin
 			//$display("initial pd_1: %d", pd_1);
 			//$display("initial pd_2: %d", pd_2);
 			
@@ -394,7 +397,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					default: begin
 						rs[un].src_data_1 = 31'b0;
 						rs[un].src1_ready = 1'b0;
-						
+						rs[un].in_use = 1'b0;
 					end
 				endcase
 				
@@ -425,6 +428,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					default: begin
 						rs[un].src_data_2 = 31'b0;
 						rs[un].src2_ready = 1'b0;
+						rs[un].in_use = 1'b0;
 					end
 				endcase
 				
@@ -506,6 +510,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					default: begin
 						rs[un_2].src_data_1 = 31'b0;
 						rs[un_2].src1_ready = 1'b0;
+						rs[un_2].in_use = 1'b0;
 					end
 					
 				endcase
@@ -537,6 +542,7 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 					default: begin
 						rs[un_2].src_data_2 = 31'b0;
 						rs[un_2].src2_ready = 1'b0;
+						rs[un_2].in_use = 1'b0;
 					end
 				endcase
 				
@@ -582,18 +588,28 @@ module dispatch(en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr
 							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
 							rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
 				end
+				
+				// Find if the RS is empty or not
+				RS_filled = 0;
+				for(num = 0; num < 16; num = num + 1) begin
+					if (rs[num].in_use == 1) begin
+						RS_filled = 1;
+					end
+				end
+				$display("RS_filled = %d", RS_filled);
+					
 			end
 			//else begin
 			//	u_rob = 0;
 			//end	
 		end
-	else begin
-		rs_line_1 = 0;
-		rs_line_2 = 0;
+		
+		else begin
+			rs_line_1 = 0;
+			rs_line_2 = 0;
+		end
+		
+		en_flag_o = (en_flag_i/* || RS_filled*/);
 	end
-	
-	
-	en_flag_o = en_flag_i;
-end
 
 endmodule
