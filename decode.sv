@@ -1,7 +1,11 @@
 `timescale 1 ns / 1 ns 
 
-module decode(c_i, en_flag_i, instr_1, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1_,
-					instr_2, opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2_, en_flag_o, c_o);
+module decode(PC1_i, PC2_i, c_i, en_flag_i, instr_1, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1_,
+					instr_2, opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2_, en_flag_o, c_o, PC1_o, PC2_o);
+	
+	input[6:0] PC1_i;
+	input[6:0] PC2_i;
+	
 	input en_flag_i;
 	input [31:0] instr_1;
 	output reg [6:0] opcode_1;
@@ -24,6 +28,9 @@ module decode(c_i, en_flag_i, instr_1, opcode_1, func3_1, func7_1, rs1_1, rs2_1,
 	
 	input [31:0] c_i;
 	output reg [31:0] c_o;
+	
+	output reg [6:0] PC1_o;
+	output reg [6:0] PC2_o;
 	
 	//based on op code, assign each variable
 	
@@ -77,6 +84,8 @@ module decode(c_i, en_flag_i, instr_1, opcode_1, func3_1, func7_1, rs1_1, rs2_1,
 		
 		en_flag_o = en_flag_i;
 		c_o = c_i;
+		PC1_o = PC1_i;
+		PC2_o = PC2_i;
 	end
 	
 	

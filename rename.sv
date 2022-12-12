@@ -1,14 +1,16 @@
 `timescale 1 ns / 1 ns 
 
-module rename(c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_, func3_1_, func7_1_, ps1_1, ps2_1, pd_1, instr_1_,
+module rename(PC1_i, PC2_i, c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_, func3_1_, func7_1_, ps1_1, ps2_1, pd_1, instr_1_,
 					opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2, opcode_2_, func3_2_, func7_2_, ps1_2, ps2_2, pd_2, instr_2_, en_flag_o, 
-					old_pd_1, old_pd_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, c_o);
+					old_pd_1, old_pd_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, c_o, PC1_o, PC2_o);
 	
 	import p::rat;
 	
 	reg free_pool[63:0]; //free pool, each index represents the physical register with the corresponding number
 	//0 = not attached to an arch reg, 1 = attached to an arch reg
 	
+	input[6:0] PC1_i;
+	input[6:0] PC2_i;
 	input en_flag_i;
 	input [6:0] opcode_1;
 	input [2:0] func3_1;
@@ -52,6 +54,8 @@ module rename(c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, in
 	
 	input [31:0] c_i;
 	output reg [31:0] c_o;
+	output reg [6:0] PC1_o;
+	output reg [6:0] PC2_o;
 	
 	integer n;
 	integer found_free;
@@ -188,6 +192,8 @@ module rename(c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, in
 		//$display("rename pd_2 = %d", pd_2);
 		en_flag_o = en_flag_i;
 		c_o = c_i;
+		PC1_o = PC1_i;
+		PC2_o = PC2_i;
 	end
 	
 endmodule

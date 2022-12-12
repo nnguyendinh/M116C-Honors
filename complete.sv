@@ -1,9 +1,9 @@
 `timescale 1 ns / 1 ns 
 
-module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1, 
-									result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2,
-									result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, en_flag_o, 
-									u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, 
+module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1, result_pc_1,
+									result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2, result_pc_2,
+									result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, result_pc_3,
+									en_flag_o, u_rob, rob_p_1, rob_op_1, rob_pc_1, rob_p_2, rob_op_2, rob_pc_2,
 									f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
 									o_rob_p_1, o_rob_p_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, pd_i, prev_flag,
 									rt_index_1, rt_result_1, rt_index_2, rt_result_2, p_rg, tot_instr_count);
@@ -27,6 +27,10 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 	input [5:0] result_dest_1;
 	input [5:0] result_dest_2;
 	input [5:0] result_dest_3;
+	
+	input reg [6:0] result_pc_1;
+	input reg [6:0] result_pc_2;
+	input reg [6:0] result_pc_3;
 
 	input result_valid_1;
 	input result_valid_2;
@@ -44,9 +48,12 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 	input [5:0] rob_p_1;
 	input [5:0] o_rob_p_1;
 	input [6:0] rob_op_1;
+	input [6:0] rob_pc_1;
+	
 	input [5:0] rob_p_2;
 	input [5:0] o_rob_p_2;
 	input [6:0] rob_op_2;
+	input [6:0] rob_pc_2;
 	
 	output reg f_flag_1;
 	output reg [5:0] dest_r_1;
@@ -133,7 +140,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 			
 			rob[curr_unused].phy_reg = rob_p_1;
 			rob[curr_unused].old_phy = o_rob_p_1;
-
+			rob[curr_unused].pc = rob_pc_1;
 			
 			//Update currently unused to next row
 			if(curr_unused < 16) begin 
@@ -159,6 +166,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 			
 			rob[curr_unused].phy_reg = rob_p_2;
 			rob[curr_unused].old_phy = o_rob_p_2;
+			rob[curr_unused].pc = rob_pc_2;
 			
 			if(curr_unused < 16) begin 
 				curr_unused = curr_unused + 1; //move curr_unused up by one
@@ -170,9 +178,10 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 		
 			//$display("New prev flag: %b", prev_flag);
 			
+			$display("ROB Update from dispatch");
 			for(integer n = 0; n < 16; n = n + 1) begin
-				$display("Up ROB Line %d: %b, %b, %d, %d, %d, %d, %d", n, rob[n].v, 
-						rob[n].instr_type, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,
+				$display("ROB Line %d: valid:%b, type:%b, pc:%h, reg:%d, result:%d, old phy:%d, old result:%d, comp:%d", n, rob[n].v, 
+						rob[n].instr_type, rob[n].pc, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,
 						rob[n].comp);
 			end
 		end
@@ -281,11 +290,11 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 			if(result_valid_1 == 1) begin
 				
 				$display("Complete enabled - FU 1");
-				//search for the rob row corresponding to the destination register
+				//search for the rob row corresponding to the pc
 				rob_found = 0;
 				
 				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rob[n].phy_reg == result_dest_1 && rob_found == 0) begin
+					if (rob[n].pc == result_pc_1 && rob_found == 0) begin
 						
 						//store old result
 						rob[n].old_result = rob[n].result;
@@ -323,7 +332,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 				rob_found = 0;
 				
 				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rob[n].phy_reg == result_dest_2 && rob_found == 0) begin
+					if (rob[n].pc == result_pc_2 && rob_found == 0) begin
 						
 						rob[n].old_result = rob[n].result;
 						rob[n].result = result_2;
@@ -351,7 +360,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 				rob_found = 0;
 				
 				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rob[n].phy_reg == result_dest_3 && rob_found == 0) begin
+					if (rob[n].pc == result_pc_3 && rob_found == 0) begin
 						
 						rob[n].old_result = rob[n].result;
 						rob[n].result = result_3;
@@ -375,8 +384,8 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 			//display entire ROB
 			$display("ROB at the end of complete");
 			for(integer n = 0; n < 16; n = n + 1) begin
-				$display("ROB Line %d: %b, %b, %d, %d, %d, %d, %d", n, rob[n].v, 
-						rob[n].instr_type, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,
+				$display("ROB Line %d: valid:%b, type:%b, pc:%h, reg:%d, result:%d, old phy:%d, old result:%d, comp:%d", n, rob[n].v, 
+						rob[n].instr_type, rob[n].pc, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,
 						rob[n].comp);
 			end
 		

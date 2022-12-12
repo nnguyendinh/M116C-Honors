@@ -1,11 +1,11 @@
 `timescale 1 ns / 1 ns 
 
-module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, 
+module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, 
 						opcode_2, func3_2, func7_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, en_flag_o,
-						result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1,
-						result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2,
-						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, 
-						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2,
+						result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1, result_pc_1,
+						result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2, result_pc_2,
+						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, result_pc_3, 
+						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, rob_pc_1, rob_pc_2,
 						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
 						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg, clock, tot_instr_count, instr_disp, c_o);
 						
@@ -20,6 +20,10 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 	input [31:0] p_rg[63:0]; //p_reg table directly wired from main
 	input [31:0] tot_instr_count;
 	input en_flag_i;
+	
+	input[6:0] pc_1;
+	input[6:0] pc_2;
+	
 	input [6:0] opcode_1;
 	input [2:0] func3_1;
 	input [6:0] func7_1;
@@ -63,10 +67,13 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 	output reg [31:0] result_2;
 	output reg [31:0] result_3;
 	
-	
 	output reg [5:0] result_dest_1;
 	output reg [5:0] result_dest_2;
 	output reg [5:0] result_dest_3;
+	
+	output reg [6:0] result_pc_1;
+	output reg [6:0] result_pc_2;
+	output reg [6:0] result_pc_3;
 	
 	output reg result_valid_1;
 	output reg result_valid_2;
@@ -93,8 +100,12 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 	output reg u_rob;
 	output reg [5:0] rob_p_1;
 	output reg [6:0] rob_op_1;
+	output reg [6:0] rob_pc_1;
+	
 	output reg [5:0] rob_p_2;
 	output reg [6:0] rob_op_2;
+	output reg [6:0] rob_pc_2;
+	
 	output reg [5:0] o_rob_p_1;
 	output reg [5:0] o_rob_p_2;
 	
@@ -290,6 +301,7 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 						result_valid_1 = 1;
 						result_ROB_1 = rs[num].rob_index;
 						result_FU_1 = rs[num].fu_index;
+						result_pc_1 = rs[num].pc;
 						
 						instr_found_1 = 1;
 						$display("ISSUE ENABLED - INSTRUCTION 1 FIRED");
@@ -325,6 +337,8 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 						result_valid_2 = 1;
 						result_ROB_2 = rs[num].rob_index;
 						result_FU_2 = rs[num].fu_index;
+						result_pc_2 = rs[num].pc;
+						
 						instr_found_2 = 1;
 						$display("ISSUE ENABLED - INSTRUCTION 2 FIRED");
 						$display("%d + %d -> P_reg %d", ALU_source_1_2, ALU_source_2_2, result_dest_2);
@@ -358,6 +372,8 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 						result_valid_3 = 1;
 						result_ROB_3 = rs[num].rob_index;
 						result_FU_3 = rs[num].fu_index;
+						result_pc_3 = rs[num].pc;
+						
 						instr_found_3 = 1;
 						$display("ISSUE ENABLED - INSTRUCTION 3 FIRED");
 						$display("%d + %d -> P_reg %d", ALU_source_1_3, ALU_source_2_3, result_dest_3);
@@ -368,8 +384,8 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 				
 				$display("RS after Issue");
 				for(integer n = 0; n < 16; n = n + 1) begin
-					$display("RS Line %d: %b, %b, %b, %b, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
-							rs[n].op, rs[n].func3, rs[n].func7, rs[n].dest_reg, rs[n].src_reg_1,
+					$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
+							rs[n].op, rs[n].func3, rs[n].func7, rs[n].pc, rs[n].dest_reg, rs[n].src_reg_1,
 							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
 							rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
 				end
@@ -379,6 +395,7 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 					rs_line_1 = un; 
 					
 					rs[un].in_use = 1'b1;
+					rs[un].pc = pc_1;
 					rs[un].op = opcode_1;
 					rs[un].func3 = func3_1;
 					rs[un].func7 = func7_1;
@@ -479,6 +496,7 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 					
 					rob_p_1 = pd_1;
 					rob_op_1 = opcode_1;
+					rob_pc_1 = pc_1;
 					o_rob_p_1 = o_pd_1;
 					
 					//Mark destination register as not ready
@@ -495,6 +513,7 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 					rs_line_2 = un_2; 
 					
 					rs[un_2].in_use = 1'b1;
+					rs[un_2].pc = pc_2;
 					rs[un_2].op = opcode_2;
 					rs[un_2].func3 = func3_2;
 					rs[un_2].func7 = func7_2;
@@ -587,6 +606,7 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 					//ROB stuff
 					rob_p_2 = pd_2;
 					rob_op_2 = opcode_2;
+					rob_pc_2 = pc_2;
 					o_rob_p_2 = o_pd_2;
 					
 					//Mark destination register as not ready
@@ -603,8 +623,8 @@ module dispatch(c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, 
 					//Display entire reservation station
 					$display("RS after Dispatch");
 					for(integer n = 0; n < 16; n = n + 1) begin
-						$display("RS Line %d: %b, %b, %b, %b, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
-								rs[n].op, rs[n].func3, rs[n].func7, rs[n].dest_reg, rs[n].src_reg_1,
+						$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
+								rs[n].op, rs[n].func3, rs[n].func7, rs[n].pc, rs[n].dest_reg, rs[n].src_reg_1,
 								rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
 								rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
 					end
