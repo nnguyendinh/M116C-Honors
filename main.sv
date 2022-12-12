@@ -48,7 +48,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						ps1_dii_1, ps2_dii_1, pd_dii_1, ps1_dii_2, ps2_dii_2, pd_dii_2,
 						retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pr_flag,
 						retire_index_1, retire_result_1, retire_index_2, retire_result_2, total_instr_count, cycle_count, c_dii, tot_instr_disp,
-						PC1_do, PC2_do, PC1_ro, PC2_ro, rob_pc_1, rob_pc_2); 
+						PC1_do, PC2_do, PC1_ro, PC2_ro, rob_pc_1, rob_pc_2, rob_opcode_1, rob_opcode_2); 
 
 	
 	reg clk = 0;	// A clock signal that changes from 0 to 1 every 5 ticks
@@ -181,11 +181,11 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	
 	output reg update_rob;
 	output reg [5:0] rob_p_reg_1;
-	reg [6:0] rob_opcode_1;
+	output reg [6:0] rob_opcode_1;
 	output reg [6:0] rob_pc_1;
 	
 	output reg [5:0] rob_p_reg_2;
-	reg [6:0] rob_opcode_2;
+	output reg [6:0] rob_opcode_2;
 	output reg [6:0] rob_pc_2;
 	
 	output reg forward_flag_1;

@@ -195,12 +195,13 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 		if(prev_cyc != c_i) begin //if it's a new cycle
 		
 			//prev_pd = pd_i;
-			prev_cyc = c_i;
+			//prev_cyc = c_i;
+			
 			//Retire stage//////////////////////////////////////////////////////////////////////
 			
 			//retire up 1st instruction if possible
 			if(rob[rob_top].comp == 1) begin
-				$display("Retire enabled");
+				$display("Retire enabled - retiring row %d in cycle $d", rob_top, c_i);
 				//release "old" physical register of the destination register
 				rt_flag_1 = 1;
 				fp_i_1 = rob[rob_top].old_phy;
@@ -212,11 +213,18 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 						$display("Writing %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
 					end
 					1: begin	// SW
+						$display("Rob top is %d", rob_top); 
+						$display("Accessing register of %d", rob[rob_top].phy_reg);
+						$display("Storing value of %d", p_rg[rob[rob_top].phy_reg]);
+						$display("1st value of %d", p_rg[rob[rob_top].phy_reg][31:24]);
+						$display("2nd value of %d", p_rg[rob[rob_top].phy_reg][23:16]);
+						$display("3rd value of %d", p_rg[rob[rob_top].phy_reg][15:8]);
+						$display("4th value of %d", p_rg[rob[rob_top].phy_reg][7:0]);
 						main_mem[rob[rob_top].result] = p_rg[rob[rob_top].phy_reg][31:24];
 						main_mem[rob[rob_top].result+1] = p_rg[rob[rob_top].phy_reg][23:16];
 						main_mem[rob[rob_top].result+2] = p_rg[rob[rob_top].phy_reg][15:8];
 						main_mem[rob[rob_top].result+3] = p_rg[rob[rob_top].phy_reg][7:0];
-						$display("Writing mem to p_reg[%d] in cycle %d", rob[rob_top].result, rob[rob_top].phy_reg, c_i);
+						$display("Writing mem address %d to p_reg[%d] in cycle %d", rob[rob_top].result, rob[rob_top].phy_reg, c_i);
 					end
 					2: begin // LW
 						p_rg[rob[rob_top].phy_reg] = {main_mem[rob[rob_top].result],main_mem[rob[rob_top].result+1],main_mem[rob[rob_top].result+2],main_mem[rob[rob_top].result+3]};
@@ -260,7 +268,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 			
 			//retire a second time if possible (same code as above)
 			if(rob[rob_top].comp == 1) begin
-
+				$display("2nd Retire enabled - retiring row %d in cycle %d", rob_top, c_i);
 				rt_flag_2 = 1;
 				fp_i_2 = rob[rob_top].old_phy;	
 				
@@ -271,15 +279,20 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 						$display("Writing %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
 					end
 					1: begin	// SW
+						$display("Storing value of %d", p_rg[rob[rob_top].phy_reg]);
+						$display("1st value of %d", p_rg[rob[rob_top].phy_reg][31:24]);
+						$display("2nd value of %d", p_rg[rob[rob_top].phy_reg][23:16]);
+						$display("3rd value of %d", p_rg[rob[rob_top].phy_reg][15:8]);
+						$display("4th value of %d", p_rg[rob[rob_top].phy_reg][7:0]);
 						main_mem[rob[rob_top].result] = p_rg[rob[rob_top].phy_reg][31:24];
 						main_mem[rob[rob_top].result+1] = p_rg[rob[rob_top].phy_reg][23:16];
 						main_mem[rob[rob_top].result+2] = p_rg[rob[rob_top].phy_reg][15:8];
 						main_mem[rob[rob_top].result+3] = p_rg[rob[rob_top].phy_reg][7:0];
-						$display("Writing mem to p_reg[%d] in cycle %d", rob[rob_top].result, rob[rob_top].phy_reg, c_i);
+						$display("Writing to mem address %d to main_mem[%d] in cycle %d", rob[rob_top].result, rob[rob_top].phy_reg, c_i);
 					end
 					2: begin // LW
 						p_rg[rob[rob_top].phy_reg] = {main_mem[rob[rob_top].result],main_mem[rob[rob_top].result+1],main_mem[rob[rob_top].result+2],main_mem[rob[rob_top].result+3]};
-						$display("Writing %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
+						$display("Loading %d to p_reg[%d] in cycle %d",p_rg[rob[rob_top].phy_reg], rob[rob_top].phy_reg, c_i);
 					end
 				endcase
 				
@@ -319,6 +332,13 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 			for(integer n = 32; n < 64; n = n + 1) begin
 				$display("register x%d: %d", n, p_rg[n]);
 			end
+			
+			
+			$display("Memory at the end of retire: %d", c_i);
+			for(integer n = 0; n < 32; n = n + 1) begin
+				$display("memory address %h: %d", n, main_mem[n]);
+			end 
+			
 					
 			//actual complete stage stuff///////////////////////////////////////////////////////
 			if(result_valid_1 == 1) begin
@@ -416,7 +436,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 			end
 			
 			//display entire ROB
-			$display("ROB at the end of complete");
+			$display("ROB at the end of complete: %d", c_i);
 			for(integer n = 0; n < 16; n = n + 1) begin
 				$display("ROB Line %d: valid:%b, type:%b, pc:%h, reg:%d, result:%d, old phy:%d, old result:%d, comp:%d", n, rob[n].v, 
 						rob[n].instr_type, rob[n].pc, rob[n].phy_reg, rob[n].result, rob[n].old_phy, rob[n].old_result,

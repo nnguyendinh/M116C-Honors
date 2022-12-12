@@ -506,6 +506,8 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 				
 					//Set up the ROB row corresponding to the instruction 
 					$display("Switching ROB signal");
+					
+					
 					if(rob_switch == 0) begin //alternate ROB signal
 							u_rob = 1;
 							rob_switch = 1;
@@ -519,6 +521,10 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 					rob_op_1 = opcode_1;
 					rob_pc_1 = pc_1;
 					o_rob_p_1 = o_pd_1;
+					
+					if(opcode_1 == 7'b0100011) begin //if SW
+						rob_p_1 = ps2_1;
+					end
 					
 					//Mark destination register as not ready
 					if (opcode_1 != 7'b0100011 && pd_1 != 0) begin	// Don't do anything if SW or x0
@@ -638,6 +644,10 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 					rob_op_2 = opcode_2;
 					rob_pc_2 = pc_2;
 					o_rob_p_2 = o_pd_2;
+					
+					if(opcode_2 == 7'b0100011) begin //if SW
+						rob_p_2 = ps2_2;
+					end
 					
 					//Mark destination register as not ready
 					
