@@ -250,6 +250,13 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 	output reg[31:0] c_dii;
 	reg[31:0] c_dio;
 	reg[31:0] c_ci;
+
+	reg lw_flag_1;
+	reg [5:0] lw_phy_reg_1;
+	reg [31:0] lw_result_1;
+	reg lw_flag_2;
+	reg [5:0] lw_phy_reg_2;
+	reg [31:0] lw_result_2;
 	
 	
 	integer program_counter = 0;
@@ -272,7 +279,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 						result_d3, result_dest_d3, result_valid_d3, result_ROB_d3, result_FU_d3, result_pc_d3,
 						update_rob, rob_p_reg_1, rob_opcode_1, rob_p_reg_2, rob_opcode_2, rob_pc_1, rob_pc_2,
 						forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
-						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio, p_regs, clk, total_instr_count, tot_instr_disp, c_dio);
+						old_pd_dii_1, old_pd_dii_2, o_rob_p_reg_1, o_rob_p_reg_2, pd_1_dio, p_regs, clk, total_instr_count, tot_instr_disp, c_dio, 
+						lw_flag_1, lw_phy_reg_1, lw_result_1, lw_flag_2, lw_phy_reg_2, lw_result_2);
 	
 	//Complete stage
 	
@@ -282,7 +290,8 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 									en_flag_co, update_rob, rob_p_reg_1, rob_opcode_1, rob_pc_1, rob_p_reg_2, rob_opcode_2, rob_pc_2,
 									forward_flag_1, dest_R_1, forwarded_data_1, forward_flag_2, dest_R_2, forwarded_data_2, forward_flag_3, dest_R_3, forwarded_data_3,
 									o_rob_p_reg_1, o_rob_p_reg_2, retire_flag_1, fp_ind_1, retire_flag_2, fp_ind_2, pd_1_ci, pr_flag,
-									retire_index_1, retire_result_1, retire_index_2, retire_result_2, p_regs, total_instr_count);
+									retire_index_1, retire_result_1, retire_index_2, retire_result_2, p_regs, total_instr_count, 
+									lw_flag_1, lw_phy_reg_1, lw_result_1, lw_flag_2, lw_phy_reg_2, lw_result_2);
 	
 	
 	initial begin 	//block that runs once at the beginning (Note, this only compiles in a testbench)
@@ -300,7 +309,7 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 		total_instr_count = 0;
 		cycle_count = 0;
 
-		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/r-test-hex.txt", instr_mem);
+		//$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/test1.txt", instr_mem);
 		$readmemh("C:/Users/geosp/Desktop/M116C_Honors/M116C-Honors/evaluation-hex.txt", instr_mem);
 		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/r-test-hex.txt", instr_mem);
 		//$readmemh("C:/Users/Nathan Nguyendinh/Documents/Quartus_Projects/M116C/OOP_RISC-V/src/evaluation-hex.txt", instr_mem);
@@ -350,11 +359,11 @@ module main(instr_1, instr_2, rs1_do_1, rs2_do_1, rd_do_1, rs1_do_2, rs2_do_2, r
 			$display("Instr: %b", instr_2);
 			program_counter = program_counter + 8;
 			
-			
+			/*
 			if (program_counter >= 160) begin
 				$stop;
 			end
-			
+			*/
 
 		end
 	end

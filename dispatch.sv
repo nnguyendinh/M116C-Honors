@@ -7,7 +7,8 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, result_pc_3, 
 						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, rob_pc_1, rob_pc_2,
 						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg, clock, tot_instr_count, instr_disp, c_o);
+						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg, clock, tot_instr_count, instr_disp, c_o,
+						lw_flag_1, lw_phy_reg_1, lw_result_1, lw_flag_2, lw_phy_reg_2, lw_result_2);
 						
 	//import p::p_reg_R;
 	import p::rs_row;
@@ -90,6 +91,13 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 	input [5:0] o_pd_1; //old phy info added to the ROB 
 	input [5:0] o_pd_2;
 	output reg [5:0] pd_1_;
+
+	input lw_flag_1;
+	input [31:0] lw_result_1;
+	input [5:0] lw_phy_reg_1; 
+	input lw_flag_2;
+	input [31:0] lw_result_2;
+	input [5:0] lw_phy_reg_2; 
 	
 	input [31:0] c_i;
 	output reg [31:0] c_o;
@@ -172,6 +180,52 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 		
 		if(en_flag_i == 1/* || RS_filled == 1*/) begin
 			
+			if(lw_flag_1 == 1) begin
+				p_reg_R[lw_phy_reg_1] = 1;
+				up_p_rg[lw_phy_reg_1] = lw_result_1;
+
+				//Update source registers from data forwarded from complete stage
+				for(integer n = 0; n < 16; n = n + 1) begin
+					if (rs[n].src_reg_1 == lw_phy_reg_1 && rs[n].src1_ready != 1) begin
+						rs[n].src_data_1 = lw_result_1;
+						rs[n].src1_ready = 1;
+					end
+					
+					
+					if (rs[n].src_reg_2 == lw_phy_reg_1 && rs[n].src2_ready != 1) begin
+						rs[n].src_data_2 = lw_result_1;
+						rs[n].src2_ready = 1;
+					end
+					
+					if (rs[n].sw_reg == lw_phy_reg_1) begin
+						rs[n].sw_ready = 1;
+					end
+				end
+			end
+			
+			if(lw_flag_2 == 1) begin
+				p_reg_R[lw_phy_reg_2] = 1;
+				up_p_rg[lw_phy_reg_2] = lw_result_2;
+
+				//Update source registers from data forwarded from complete stage
+				for(integer n = 0; n < 16; n = n + 1) begin
+					if (rs[n].src_reg_1 == lw_phy_reg_2 && rs[n].src1_ready != 1) begin
+						rs[n].src_data_1 = lw_result_2;
+						rs[n].src1_ready = 1;
+					end
+					
+					
+					if (rs[n].src_reg_2 == lw_phy_reg_2 && rs[n].src2_ready != 1) begin
+						rs[n].src_data_2 = lw_result_2;
+						rs[n].src2_ready = 1;
+					end
+					
+					if (rs[n].sw_reg == lw_phy_reg_2) begin
+						rs[n].sw_ready = 1;
+					end
+				end
+			end
+
 			//Update p_reg_R from complete stage
 			if(f_flag_1 == 1 && dest_r_1 != 0) begin
 				p_reg_R[dest_r_1] = 1;
@@ -185,6 +239,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 						rs[n].src_data_1 = f_data_1;
 						rs[n].src1_ready = 1;
 					end
+					
 					
 					if (rs[n].src_reg_2 == dest_r_1 && rs[n].src2_ready != 1) begin
 						rs[n].src_data_2 = f_data_1;
@@ -250,8 +305,17 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 			
 				//Actual Dispatch/fire stuff////////////////////////////////////////
 				$display("Dispatch stage enabled");
+
 				prev_cyc = c_i;
 				rs_found = 0;
+
+				if(opcode_1 != 7'b0100011 && pd_1 != 0) begin
+					p_reg_R[pd_1] = 0;
+				end
+
+				if(opcode_2 != 7'b0100011 && pd_2 != 0) begin
+					p_reg_R[pd_2] = 0;
+				end
 				
 				// Find first two unused rows in the RS
 				for(num = 0; num < 16; num = num + 1) begin
@@ -403,6 +467,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 
 				//Rest of Dispatch stage ///////////////////////////////////////////////
 				if(instr_disp <= tot_instr_count) begin
+
 					rs_line_1 = un; 
 					
 					rs[un].in_use = 1'b1;
@@ -659,6 +724,7 @@ module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, p
 					
 					//increase number of instructions dispatched
 					instr_disp = instr_disp + 1;
+
 					
 					//Display entire reservation station
 					$display("RS after Dispatch in cycle %d", c_i);
