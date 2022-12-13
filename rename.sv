@@ -1,762 +1,208 @@
 `timescale 1 ns / 1 ns 
 
-module dispatch(pc_1, pc_2, c_i, en_flag_i, opcode_1, func3_1, func7_1, ps1_1, ps2_1, pd_1, instr_1, rs_line_1, 
-						opcode_2, func3_2, func7_2, ps1_2, ps2_2, pd_2, instr_2, rs_line_2, en_flag_o,
-						result_1, result_dest_1, result_valid_1, result_ROB_1, result_FU_1, result_pc_1,
-						result_2, result_dest_2, result_valid_2, result_ROB_2, result_FU_2, result_pc_2,
-						result_3, result_dest_3, result_valid_3, result_ROB_3, result_FU_3, result_pc_3, 
-						u_rob, rob_p_1, rob_op_1, rob_p_2, rob_op_2, rob_pc_1, rob_pc_2,
-						f_flag_1, dest_r_1, f_data_1, f_flag_2, dest_r_2, f_data_2, f_flag_3, dest_r_3, f_data_3,
-						o_pd_1, o_pd_2, o_rob_p_1, o_rob_p_2, pd_1_, p_rg, clock, tot_instr_count, instr_disp, c_o,
-						lw_flag_1, lw_phy_reg_1, lw_result_1, lw_flag_2, lw_phy_reg_2, lw_result_2);
-						
-	//import p::p_reg_R;
-	import p::rs_row;
-	import p::rob_row;
-	//import p::p_regs;
+module rename(PC1_i, PC2_i, c_i, en_flag_i, opcode_1, func3_1, func7_1, rs1_1, rs2_1, rd_1, instr_1, opcode_1_, func3_1_, func7_1_, ps1_1, ps2_1, pd_1, instr_1_,
+					opcode_2, func3_2, func7_2, rs1_2, rs2_2, rd_2, instr_2, opcode_2_, func3_2_, func7_2_, ps1_2, ps2_2, pd_2, instr_2_, en_flag_o, 
+					old_pd_1, old_pd_2, rt_flag_1, fp_i_1, rt_flag_2, fp_i_2, c_o, PC1_o, PC2_o);
 	
-	rs_row rs [16]; //reservation station
-	reg p_reg_R[63:0]; //Table for determining if physical register is ready or not
+	import p::rat;
 	
-	input [31:0] p_rg[63:0]; //p_reg table directly wired from main
-	input [31:0] tot_instr_count;
+	reg free_pool[63:0]; //free pool, each index represents the physical register with the corresponding number
+	//0 = not attached to an arch reg, 1 = attached to an arch reg
+	
+	input[6:0] PC1_i;
+	input[6:0] PC2_i;
 	input en_flag_i;
-	
-	input[6:0] pc_1;
-	input[6:0] pc_2;
-	
 	input [6:0] opcode_1;
 	input [2:0] func3_1;
 	input [6:0] func7_1;
-	input [5:0] ps1_1;
-	input [5:0] ps2_1;
-	input [5:0] pd_1;
+	input [4:0] rs1_1;
+	input [4:0] rs2_1;
+	input [4:0] rd_1;
 	input [31:0] instr_1;
-	output integer rs_line_1;
-
+	output reg [6:0] opcode_1_;
+	output reg [2:0] func3_1_;
+	output reg [6:0] func7_1_;
+	output reg [5:0] ps1_1;			// Physical registers are 6 bit because we have 128 of them
+	output reg [5:0] ps2_1;
+	output reg [5:0] pd_1;
+	output reg [31:0] instr_1_;
+	
 	input [6:0] opcode_2;
 	input [2:0] func3_2;
 	input [6:0] func7_2;
-	input [5:0] ps1_2;
-	input [5:0] ps2_2;
-	input [5:0] pd_2;
+	input [4:0] rs1_2;
+	input [4:0] rs2_2;
+	input [4:0] rd_2;
 	input [31:0] instr_2;
-	output integer rs_line_2;
+	output reg [6:0] opcode_2_;
+	output reg [2:0] func3_2_;
+	output reg [6:0] func7_2_;
+	output reg [5:0] ps1_2;			// Physical registers are 6 bit because we have 128 of them
+	output reg [5:0] ps2_2;
+	output reg [5:0] pd_2;
+	output reg [31:0] instr_2_;
+	
+	output reg [5:0] old_pd_1;
+	output reg [5:0] old_pd_2;
+	
+	input rt_flag_1;
+	input [5:0] fp_i_1;
+	input rt_flag_2;
+	input [5:0] fp_i_2;
+	
 	output reg en_flag_o;
-	output reg [31:0] instr_disp; //total number of instructions dispatched 
-	
-	reg [6:0] ALU_opcode_1;
-	reg [6:0] ALU_opcode_2;
-	reg [6:0] ALU_opcode_3;
-	
-	reg [2:0] ALU_func3_1;
-	reg [2:0] ALU_func3_2;
-	reg [2:0] ALU_func3_3;
-	
-	reg [6:0] ALU_func7_1;
-	reg [6:0] ALU_func7_2;
-	reg [6:0] ALU_func7_3;
-	
-	reg [31:0] ALU_source_1_1;
-	reg [31:0] ALU_source_2_1;
-	reg [31:0] ALU_source_1_2;
-	reg [31:0] ALU_source_2_2;
-	reg [31:0] ALU_source_1_3;
-	reg [31:0] ALU_source_2_3;
-	
-	output reg [31:0] result_1;
-	output reg [31:0] result_2;
-	output reg [31:0] result_3;
-	
-	output reg [5:0] result_dest_1;
-	output reg [5:0] result_dest_2;
-	output reg [5:0] result_dest_3;
-	
-	output reg [6:0] result_pc_1;
-	output reg [6:0] result_pc_2;
-	output reg [6:0] result_pc_3;
-	
-	output reg result_valid_1;
-	output reg result_valid_2;
-	output reg result_valid_3;
-	
-	output reg [3:0] result_ROB_1; //ROB index of the instruction being fired
-	output reg [3:0] result_ROB_2;
-	output reg [3:0] result_ROB_3;
-	
-	output reg [1:0] result_FU_1; //FU index of instruction being fired
-	output reg [1:0] result_FU_2;
-	output reg [1:0] result_FU_3;
-	
-	input [5:0] o_pd_1; //old phy info added to the ROB 
-	input [5:0] o_pd_2;
-	output reg [5:0] pd_1_;
-
-	input lw_flag_1;
-	input [31:0] lw_result_1;
-	input [5:0] lw_phy_reg_1; 
-	input lw_flag_2;
-	input [31:0] lw_result_2;
-	input [5:0] lw_phy_reg_2; 
 	
 	input [31:0] c_i;
 	output reg [31:0] c_o;
+	output reg [6:0] PC1_o;
+	output reg [6:0] PC2_o;
 	
-	//Outside of the pipeline
-	
-	//Outputs to ROB
-	output reg u_rob;
-	output reg [5:0] rob_p_1;
-	output reg [6:0] rob_op_1;
-	output reg [6:0] rob_pc_1;
-	
-	output reg [5:0] rob_p_2;
-	output reg [6:0] rob_op_2;
-	output reg [6:0] rob_pc_2;
-	
-	output reg [5:0] o_rob_p_1;
-	output reg [5:0] o_rob_p_2;
-	
-	//Updates to source register from complete stage
-	input f_flag_1;
-	input [5:0] dest_r_1;
-	input [31:0] f_data_1;
-	input f_flag_2;
-	input [5:0] dest_r_2;
-	input [31:0] f_data_2;
-	input f_flag_3;
-	input [5:0] dest_r_3;
-	input [31:0] f_data_3;
-	
-		
-	reg [4:0] un; //index of first unused
-	reg [4:0] un_2; //index of second unused
 	reg [31:0] prev_cyc;
-	integer rob_un;
-	integer rob_un_2;
-	reg switch = 0;
-	reg rob_switch = 0;
-	integer num;
-	reg rob_found = 0;
-	reg [1:0] rs_found = 0;
-	reg rob_found_2 = 0;
-	reg rs_found_2 = 0;
-	reg instr_found_1 = 0;
-	reg instr_found_2 = 0;
-	reg instr_found_3 = 0;
-	rob_row dum;
-	rob_row dum2;
-	reg [31:0] up_p_rg[63:0]; //updated data to put physical registers in
-	
-	
-	reg RS_filled = 0;
-	input clock;
-
-	ALU fu_1(ALU_opcode_1, ALU_func3_1, ALU_func7_1, ALU_source_1_1, ALU_source_2_1, result_dest_1, result_1);
-	ALU fu_2(ALU_opcode_2, ALU_func3_2, ALU_func7_2, ALU_source_1_2, ALU_source_2_2, result_dest_2, result_2);
-	ALU fu_3(ALU_opcode_3, ALU_func3_3, ALU_func7_3, ALU_source_1_3, ALU_source_2_3, result_dest_3, result_3);
+	integer n;
+	integer found_free;
+	integer free_p;
 	
 	initial begin
-	
-		//before enable flag is sent thru, initialize reservation station
-		for(integer n = 0; n < 16; n = n + 1) begin
-			rs[n].in_use = 0;
-		end 
 		
-		for(integer n = 0; n < 64; n = n + 1) begin
-			p_reg_R[n] = 1; //all physical registers are intially ready
+		for(n = 0; n < 32; n = n + 1) begin
+			free_pool[n] = 1;
 		end 
+
+		for(n = 32; n < 64; n = n + 1) begin
+			free_pool[n] = 0;
+		end
 		
 		prev_cyc = 0;
-		instr_disp = 0;
-		u_rob = 0;
 	end
 	
+	
 	always@(*) begin
-		//place instruction in reservation station (RS) --> mark as used, grab which operation, mark which FU
-		//find first unused reservation station --> loop to find first unused every time?
+	
+		$display("Rename enabled: %b", en_flag_i);
 		
-		//$display("Dispatch enabled: %b", en_flag_i);
-		
-		if(en_flag_i == 1/* || RS_filled == 1*/) begin
+		if(en_flag_i == 1) begin
 			
-			if(lw_flag_1 == 1) begin
-				p_reg_R[lw_phy_reg_1] = 1;
-				up_p_rg[lw_phy_reg_1] = lw_result_1;
-
-				//Update source registers from data forwarded from complete stage
-				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == lw_phy_reg_1 && rs[n].src1_ready != 1) begin
-						rs[n].src_data_1 = lw_result_1;
-						rs[n].src1_ready = 1;
-					end
-					
-					
-					if (rs[n].src_reg_2 == lw_phy_reg_1 && rs[n].src2_ready != 1) begin
-						rs[n].src_data_2 = lw_result_1;
-						rs[n].src2_ready = 1;
-					end
-					
-					if (rs[n].sw_reg == lw_phy_reg_1) begin
-						rs[n].sw_ready = 1;
-					end
-				end
-			end
+			//Updates from Retire stage
+			if(rt_flag_1 == 1 || rt_flag_2 == 1) begin
 			
-			if(lw_flag_2 == 1) begin
-				p_reg_R[lw_phy_reg_2] = 1;
-				up_p_rg[lw_phy_reg_2] = lw_result_2;
-
-				//Update source registers from data forwarded from complete stage
-				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == lw_phy_reg_2 && rs[n].src1_ready != 1) begin
-						rs[n].src_data_1 = lw_result_2;
-						rs[n].src1_ready = 1;
-					end
-					
-					
-					if (rs[n].src_reg_2 == lw_phy_reg_2 && rs[n].src2_ready != 1) begin
-						rs[n].src_data_2 = lw_result_2;
-						rs[n].src2_ready = 1;
-					end
-					
-					if (rs[n].sw_reg == lw_phy_reg_2) begin
-						rs[n].sw_ready = 1;
-					end
-				end
-			end
-
-			//Update p_reg_R from complete stage
-			if(f_flag_1 == 1 && dest_r_1 != 0) begin
-				p_reg_R[dest_r_1] = 1;
-				up_p_rg[dest_r_1] = f_data_1;
-				
-				$display("Updating any src reg 1: %d with value: %d in cycle %d", dest_r_1, f_data_1, c_i);
-				
-				//Update source registers from data forwarded from complete stage
-				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == dest_r_1 && rs[n].src1_ready != 1) begin
-						rs[n].src_data_1 = f_data_1;
-						rs[n].src1_ready = 1;
-					end
-					
-					
-					if (rs[n].src_reg_2 == dest_r_1 && rs[n].src2_ready != 1) begin
-						rs[n].src_data_2 = f_data_1;
-						rs[n].src2_ready = 1;
-					end
-					
-					if (rs[n].sw_reg == dest_r_1) begin
-						rs[n].sw_ready = 1;
-					end
+				if(rt_flag_1 == 1) begin
+					free_pool[fp_i_1] = 1;
 				end
 				
-			end
-		
-			if(f_flag_2 == 1 && dest_r_2 != 0) begin
-				p_reg_R[dest_r_2] = 1;
-				up_p_rg[dest_r_2] = f_data_2;
-				
-				$display("Updating any src reg 1: %d with value: %d in cycle %d", dest_r_2, f_data_2, c_i);
-				
-				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == dest_r_2 && rs[n].src1_ready != 1) begin
-						rs[n].src_data_1 = f_data_2;
-						rs[n].src1_ready = 1;
-					end
-					
-					if (rs[n].src_reg_2 == dest_r_2 && rs[n].src2_ready != 1) begin
-						rs[n].src_data_2 = f_data_2;
-						rs[n].src2_ready = 1;
-					end
-					
-					if (rs[n].sw_reg == dest_r_2) begin
-						rs[n].sw_ready = 1;
-					end
+				if(rt_flag_2 == 1) begin
+					free_pool[fp_i_2] = 1;
 				end
+				
 			end 
 			
-			if(f_flag_3 == 1 && dest_r_3 != 0) begin
-				p_reg_R[dest_r_3] = 1;
-				up_p_rg[dest_r_3] = f_data_3;
-				
-				$display("Updating any src reg 3: %d", dest_r_3);
-				
-				for(integer n = 0; n < 16; n = n + 1) begin
-					if (rs[n].src_reg_1 == dest_r_3 && rs[n].src1_ready != 1) begin
-						rs[n].src_data_1 = f_data_3;
-						rs[n].src1_ready = 1;
-					end
-					
-					if (rs[n].src_reg_2 == dest_r_3 && rs[n].src2_ready != 1) begin
-						rs[n].src_data_2 = f_data_3;
-						rs[n].src2_ready = 1;
-					end
-					
-					if (rs[n].sw_reg == dest_r_3) begin
-						rs[n].sw_ready = 1;
-					end
-				end
-			end 
-			
-
-
-			if(prev_cyc != c_i) begin //make sure it's a different cycle
-			
-				//Actual Dispatch/fire stuff////////////////////////////////////////
-				$display("Dispatch stage enabled");
-
+			if(prev_cyc != c_i) begin
+				//Rename stuff////////////////////////////////////////////////////
 				prev_cyc = c_i;
-				rs_found = 0;
-
-				if(opcode_1 != 7'b0100011 && pd_1 != 0) begin
-					p_reg_R[pd_1] = 0;
-				end
-
-				if(opcode_2 != 7'b0100011 && pd_2 != 0) begin
-					p_reg_R[pd_2] = 0;
-				end
+				found_free = 0;
+				free_p = 0;
 				
-				// Find first two unused rows in the RS
-				for(num = 0; num < 16; num = num + 1) begin
-					
-					if (rs[num].in_use == 0 && rs_found == 0) begin
-						un = num;
-						//$display("found un: %d, rs_f: %b", num, rs_found);
-						rs_found = 1;
-					end
-					else if (rs[num].in_use == 0 && rs_found == 1) begin
-						un_2 = num;
-						//$display("found un_2: %d, rs_f: %b", num, rs_found);
-						rs_found = 2;
-					end
-					
-				end
-					
-				//$display("1st RS line found: %d",un);
-				//$display("2nd RS line found: %d",un_2);
-				
-				// Issue/Fire Stage////////////////////////////////////////////////
-				
-				$display("RS before Issue in cycle %d", c_i);
-				for(integer n = 0; n < 16; n = n + 1) begin
-					$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
-							rs[n].op, rs[n].func3, rs[n].func7, rs[n].pc, rs[n].dest_reg, rs[n].src_reg_1,
-							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
-							rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
-				end
-				
-				result_valid_1 = 0;
-				result_valid_2 = 0;
-				result_valid_3 = 0;
-				
-				// Fire first instruction
-				instr_found_1 = 0;
-				for(num = 0; num < 16; num = num + 1) begin
-				
-					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-							&& rs[num].sw_ready == 1 && instr_found_1 == 0) begin
-						
-						ALU_opcode_1 = rs[num].op;
-						ALU_func3_1 = rs[num].func3;
-						ALU_func7_1 = rs[num].func7;
-						ALU_source_1_1 = rs[num].src_data_1;
-						ALU_source_2_1 = rs[num].src_data_2;
-
-						if (rs[num].op == 7'b0100011) begin	// If SW, we don't use rd
-							$display("SW INSTRUCTION FIREDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
-							result_dest_1 = rs[num].sw_reg;
-						end
-						else begin
-							result_dest_1 = rs[num].dest_reg;
-						end
-						
-						result_valid_1 = 1;
-						result_ROB_1 = rs[num].rob_index;
-						result_FU_1 = rs[num].fu_index;
-						result_pc_1 = rs[num].pc;
-						
-						instr_found_1 = 1;
-						$display("ISSUE ENABLED - INSTRUCTION 1 FIRED");
-						$display("%d + %d -> P_reg %d", ALU_source_1_1, ALU_source_2_1, result_dest_1);
-						
-						//clear the whole row
-						rs[num] = 0;
+				for (n = 0; n < 64; n = n + 1) begin
+					if (free_pool[n] == 0 && found_free == 0) begin
+						found_free = 1;
+						free_p = n;
 					end
 				end
 				
+				//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
+				ps1_1 = rat[rs1_1];
+				ps2_1 = rat[rs2_1];
 				
-				// Fire second instruction
-				instr_found_2 = 0;
-				for(num = 0; num < 16; num = num + 1) begin
+				//update RAT
+				if (rd_1 != 0 && opcode_1 != 7'b0100011) begin // Ignore x0 and SW instructions
+					old_pd_1 = rat[rd_1];
+					rat[rd_1] = free_p;
+					//update value in "free pool" (actually list of all free_pool)
+					free_pool[free_p] = 1'b1;
+					pd_1 = free_p;
+				end
 				
-					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-							&& rs[num].sw_ready == 1 && instr_found_2 == 0) begin
-						
-						ALU_opcode_2 = rs[num].op;
-						ALU_func3_2 = rs[num].func3;
-						ALU_func7_2 = rs[num].func7;
-						ALU_source_1_2 = rs[num].src_data_1;
-						ALU_source_2_2 = rs[num].src_data_2;
-
-						if (rs[num].op == 7'b0100011) begin	// If SW, we don't use rd
-							$display("SW INSTRUCTION FIREDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
-							result_dest_2 = rs[num].sw_reg;
-						end
-						else begin
-							result_dest_2 = rs[num].dest_reg;
-						end
-						
-						result_valid_2 = 1;
-						result_ROB_2 = rs[num].rob_index;
-						result_FU_2 = rs[num].fu_index;
-						result_pc_2 = rs[num].pc;
-						
-						instr_found_2 = 1;
-						$display("ISSUE ENABLED - INSTRUCTION 2 FIRED");
-						$display("%d + %d -> P_reg %d", ALU_source_1_2, ALU_source_2_2, result_dest_2);
-						
-						rs[num] = 0;
+				else begin
+					pd_1 = 0;
+				end
+				
+				opcode_1_ = opcode_1;	// The signals we are passing and not changing
+				func3_1_ = func3_1;
+				func7_1_ = func7_1;
+				instr_1_ = instr_1;
+			
+			/////////////// OK NOW DO IT AGAIN :) /////////////////////////
+			
+				found_free = 0;
+				free_p = 0;
+				
+				for (n = 0; n < 64; n = n + 1) begin
+					if (free_pool[n] == 0 && found_free == 0) begin
+						found_free = 1;
+						free_p = n;
 					end
 				end
 				
-				// Fire third instruction
-				instr_found_3 = 0;
-				for(num = 0; num < 16; num = num + 1) begin
+				//Algorithm: for each source register, access RAT and pick the corresponding P-reg 
+				ps1_2 = rat[rs1_2];
+				ps2_2 = rat[rs2_2];
 				
-					if (rs[num].in_use == 1 && rs[num].src1_ready == 1 && rs[num].src2_ready == 1 
-							&& rs[num].sw_ready == 1 && instr_found_3 == 0) begin
-							
-						
-						ALU_opcode_3 = rs[num].op;
-						ALU_func3_3 = rs[num].func3;
-						ALU_func7_3 = rs[num].func7;
-						ALU_source_1_3 = rs[num].src_data_1;
-						ALU_source_2_3 = rs[num].src_data_2;
-
-						if (rs[num].op == 7'b0100011) begin	// If SW, we don't use rd
-							$display("SW INSTRUCTION FIREDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
-							result_dest_3 = rs[num].sw_reg;
-						end
-						else begin
-							result_dest_3 = rs[num].dest_reg;
-						end
-						
-						result_valid_3 = 1;
-						result_ROB_3 = rs[num].rob_index;
-						result_FU_3 = rs[num].fu_index;
-						result_pc_3 = rs[num].pc;
-						
-						instr_found_3 = 1;
-						$display("ISSUE ENABLED - INSTRUCTION 3 FIRED");
-						$display("%d + %d -> P_reg %d", ALU_source_1_3, ALU_source_2_3, result_dest_3);
-						
-						rs[num] = 0;
-					end
+				//update RAT
+				if (rd_2 != 0 && opcode_2 != 7'b0100011) begin	// Ignore x0 and SW instructions
+					old_pd_2 = rat[rd_2];
+					rat[rd_2] = free_p;
+					//update value in "free pool" (actually list of all free_pool)
+					free_pool[free_p] = 1'b1;
+					pd_2 = free_p;
 				end
+				
+				else begin
+					pd_2 = 0;
+				end
+
+				opcode_2_ = opcode_2;	// The signals we are passing and not changing
+				func3_2_ = func3_2;
+				func7_2_ = func7_2;
+				instr_2_ = instr_2;
+
 				
 				/*
-				$display("RS after Issue");
-				for(integer n = 0; n < 16; n = n + 1) begin
-					$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
-							rs[n].op, rs[n].func3, rs[n].func7, rs[n].pc, rs[n].dest_reg, rs[n].src_reg_1,
-							rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
-							rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
+				for(n = 0; n < 64; n = n + 1) begin
+					$display("free_pool[%d]: %b", n, free_pool[n]); 
 				end
-				*/
-
-				//Rest of Dispatch stage ///////////////////////////////////////////////
-				if(instr_disp <= tot_instr_count) begin
-
-					rs_line_1 = un; 
-					
-					rs[un].in_use = 1'b1;
-					rs[un].pc = pc_1;
-					rs[un].op = opcode_1;
-					rs[un].func3 = func3_1;
-					rs[un].func7 = func7_1;
-					//$display("pd_1: %d", pd_1);
-					rs[un].dest_reg = pd_1;
-					rs[un].src_reg_1 = ps1_1;
-					rs[un].src_reg_2 = ps2_1;
-					rs[un].sw_reg = 0;
-					rs[un].sw_ready = 1'b1;
-					
-					
-					//Set source 1 data if possible
-					case (opcode_1)
-						7'b0010011: begin	// ADDI & ANDI
-							rs[un].src_data_1 = p_rg[ps1_1];
-							rs[un].src1_ready = p_reg_R[ps1_1];
-						end
-						7'b0110011: begin	// ADD, SUB, XOR, SRA
-							rs[un].src_data_1 = p_rg[ps1_1];
-							rs[un].src1_ready = p_reg_R[ps1_1];
-						end
-						7'b0000011: begin		// LW
-							rs[un].src_data_1 = p_rg[ps1_1];
-							rs[un].src1_ready = p_reg_R[ps1_1];
-						end
-						7'b0100011: begin		// SW
-							rs[un].src_data_1 = p_rg[ps1_1];
-							rs[un].src1_ready = p_reg_R[ps1_1];
-						end
-						
-						default: begin
-							rs[un].src_data_1 = 31'b0;
-							rs[un].src1_ready = 1'b0;
-							rs[un].in_use = 1'b0;
-						end
-					endcase
-					
-					if (ps1_1 == 0) begin
-						rs[un_2].src1_ready = 1'b1;
-					end
-					
-					if(up_p_rg[rs[un].src_reg_1] >= 0) begin //basically if it's a non-null value
-						rs[un].src_data_1 = up_p_rg[rs[un].src_reg_1];
-					end
-					
-					//Set source 2 data/immediate if possible
-					case (opcode_1)
-						7'b0010011: begin	// ADDI & ANDI
-							rs[un].src_data_2 = {20'b0, instr_1[31:20]};
-							rs[un].src_reg_2 = 0; //Make source register 0 to avoid inaccurate updates from complete
-							rs[un].src2_ready = 1'b1;
-						end
-						7'b0110011: begin	// ADD, SUB, XOR, SRA
-							rs[un].src_data_2 = p_rg[ps2_1];
-							rs[un].src2_ready = p_reg_R[ps2_1];
-						end
-						7'b0000011: begin		// LW
-							rs[un].src_data_2 = {20'b0, instr_1[31:20]};
-							rs[un].src2_ready = 1'b1;
-						end
-						7'b0100011: begin		// SW
-							rs[un].src_data_2 = {20'b0, instr_1[31:25], instr_1[11:7]};
-							rs[un].src2_ready = 1'b1;
-							rs[un].sw_reg = ps2_1;
-							rs[un].sw_ready = p_reg_R[ps2_1];
-						end
-						default: begin
-							rs[un].src_data_2 = 31'b0;
-							rs[un].src2_ready = 1'b0;
-							rs[un].in_use = 1'b0;
-						end
-					endcase
-					
-					if (ps2_1 == 0) begin
-						rs[un].src2_ready = 1'b1;
-					end
-					
-					if(up_p_rg[rs[un].src_reg_2] >= 0) begin //basically if it's a non-null value
-						rs[un].src_data_2 = up_p_rg[rs[un].src_reg_2];
-					end
-					
-					
-				   //determine fu_index from opcode
-					if (opcode_1 == 7'b0100011 || opcode_1 == 7'b0000011) begin//if instr is SW or LW
-						rs[un].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
-					end
-					else begin
-						if(switch == 0) begin //alternate between FU 1 and 2
-							rs[un].fu_index = 0;
-							switch = 1;
-						end
-						else begin
-							rs[un].fu_index = 1; 
-							switch = 0;
-						end
-					end
+				*/	
 				
-					//Set up the ROB row corresponding to the instruction 
-					$display("Switching ROB signal");
-					
-					
-					if(rob_switch == 0) begin //alternate ROB signal
-							u_rob = 1;
-							rob_switch = 1;
-						end
-						else begin
-							u_rob = 0; 
-							rob_switch = 0;
-						end
-					
-					rob_p_1 = pd_1;
-					rob_op_1 = opcode_1;
-					rob_pc_1 = pc_1;
-					o_rob_p_1 = o_pd_1;
-					
-					if(opcode_1 == 7'b0100011) begin //if SW
-						rob_p_1 = ps2_1;
-					end
-					
-					//Mark destination register as not ready
-					if (opcode_1 != 7'b0100011 && pd_1 != 0) begin	// Don't do anything if SW or x0
-						p_reg_R[pd_1] = 1'b0;
-					end
-					
-					//increase number of instructions dispatched
-					instr_disp = instr_disp + 1;
-					
-					/////////////// OK NOW DO IT AGAIN :) /////////////////////////
-					
-					
-					rs_line_2 = un_2; 
-					
-					rs[un_2].in_use = 1'b1;
-					rs[un_2].pc = pc_2;
-					rs[un_2].op = opcode_2;
-					rs[un_2].func3 = func3_2;
-					rs[un_2].func7 = func7_2;
-					//$display("pd_2: %d", pd_2);
-					rs[un_2].dest_reg = pd_2;
-					rs[un_2].src_reg_1 = ps1_2;
-					rs[un_2].src_reg_2 = ps2_2;
-					rs[un_2].sw_reg = 0;
-					rs[un_2].sw_ready = 1'b1;
-
-					//Set source 1 data if possible
-					case (opcode_2)
-						7'b0010011: begin	// ADDI & ANDI
-							rs[un_2].src_data_1 = p_rg[ps1_2];
-							rs[un_2].src1_ready = p_reg_R[ps1_2];
-						end
-						7'b0110011: begin	// ADD, SUB, XOR, SRA
-							rs[un_2].src_data_1 = p_rg[ps1_2];
-							rs[un_2].src1_ready = p_reg_R[ps1_2];
-						end
-						7'b0000011: begin		// LW
-							rs[un_2].src_data_1 = p_rg[ps1_2];
-							rs[un_2].src1_ready = p_reg_R[ps1_2];
-						end
-						7'b0100011: begin		// SW
-							rs[un_2].src_data_1 = p_rg[ps1_2];
-							rs[un_2].src1_ready = p_reg_R[ps1_2];
-						end
-						default: begin
-							rs[un_2].src_data_1 = 31'b0;
-							rs[un_2].src1_ready = 1'b0;
-							rs[un_2].in_use = 1'b0;
-						end
-						
-					endcase
-					
-					if (ps1_2 == 0) begin
-						rs[un_2].src1_ready = 1'b1;
-					end
-						
-					if(up_p_rg[rs[un_2].src_reg_1] >= 0) begin //basically if it's a non-null value
-						rs[un_2].src_data_1 = up_p_rg[rs[un_2].src_reg_1];
-					end	
-						
-					//Set source 2 data/immediate if possible
-					case (opcode_2)
-						7'b0010011: begin	// ADDI & ANDI
-							rs[un_2].src_data_2 = {20'b0, instr_2[31:20]};
-							rs[un_2].src_reg_2 = 0;
-							rs[un_2].src2_ready = 1'b1;
-						end
-						7'b0110011: begin	// ADD, SUB, XOR, SRA
-							rs[un_2].src_data_2 = p_rg[ps2_2];
-							rs[un_2].src2_ready = p_reg_R[ps2_2];
-						end
-						7'b0000011: begin		// LW
-							rs[un_2].src_data_2 = {20'b0, instr_2[31:20]};
-							rs[un_2].src2_ready = 1'b1;
-						end
-						7'b0100011: begin		// SW
-							rs[un_2].src_data_2 = {20'b0, instr_2[31:25], instr_2[11:7]};
-							rs[un_2].src2_ready = 1'b1;
-							rs[un_2].sw_reg = ps2_2;
-							rs[un_2].sw_ready = p_reg_R[ps2_2];
-						end
-						default: begin
-							rs[un_2].src_data_2 = 31'b0;
-							rs[un_2].src2_ready = 1'b0;
-							rs[un_2].in_use = 1'b0;
-						end
-					endcase
-					
-					if (ps2_2 == 0) begin
-						rs[un_2].src2_ready = 1'b1;
-					end
-					
-					if(up_p_rg[rs[un_2].src_reg_2] >= 0) begin //basically if it's a non-null value
-						rs[un_2].src_data_2 = up_p_rg[rs[un_2].src_reg_2];
-					end
-							
-					
-					//determine fu_index from opcode
-					if (opcode_2 == 7'b0100011 || opcode_2 == 7'b0000011) begin//if instr is LW or SW
-						rs[un_2].fu_index = 2; //index 2 corresponds to FU 3 (mem only)
-					end
-					else begin
-						if(switch == 0) begin //alternate between FU 1 and 2
-							rs[un_2].fu_index = 0;
-							switch = 1;
-						end
-						else begin
-							rs[un_2].fu_index = 1; 
-							switch = 0;
-						end
-					end
-					
-					
-					
-					//ROB stuff
-					rob_p_2 = pd_2;
-					rob_op_2 = opcode_2;
-					rob_pc_2 = pc_2;
-					o_rob_p_2 = o_pd_2;
-					
-					if(opcode_2 == 7'b0100011) begin //if SW
-						rob_p_2 = ps2_2;
-					end
-					
-					//Mark destination register as not ready
-					
-					if (opcode_1 != 7'b0100011 && pd_2 != 0) begin			// Don't do anything if SW
-						p_reg_R[pd_2] = 1'b0;
-					end
-
-					pd_1_ = pd_1; //to let complete stage know when a new cycle has passed
-					
-					//increase number of instructions dispatched
-					instr_disp = instr_disp + 1;
-
-					
-					//Display entire reservation station
-					$display("RS after Dispatch in cycle %d", c_i);
-					for(integer n = 0; n < 16; n = n + 1) begin
-						$display("RS Line %d: %b, %b, %b, %b, pc: %h, dest: %d, src1: %d, %d, %d, src2: %d, %d, %d, sw: %d, %d, fu: %b, %b", n, rs[n].in_use, 
-								rs[n].op, rs[n].func3, rs[n].func7, rs[n].pc, rs[n].dest_reg, rs[n].src_reg_1,
-								rs[n].src_data_1, rs[n].src1_ready, rs[n].src_reg_2, rs[n].src_data_2,
-								rs[n].src2_ready, rs[n].sw_reg, rs[n].sw_ready, rs[n].fu_index, rs[n].rob_index);
-					end
-					
-					// Find if the RS is empty or not
-					RS_filled = 0;
-					for(num = 0; num < 16; num = num + 1) begin
-						if (rs[num].in_use == 1) begin
-							RS_filled = 1;
-						end
-					end
-					$display("RS_filled = %d", RS_filled);
+				$display("RAT at end of rename: %d", c_i);
+				for(integer n = 0; n < 32; n = n + 1) begin
+					$display("register x%d: %d", n, rat[n]);
 				end
+				
 			end
-			//else begin
-			//	u_rob = 0;
-			//end	
 		end
 		
 		else begin
-			rs_line_1 = 0;
-			rs_line_2 = 0;
+			opcode_1_ = 0;
+			func3_1_ = 0;
+			func7_1_ = 0;
+			ps1_1 = 0;		
+			ps2_1 = 0;
+			pd_1 = 0;
+			instr_1_ = 0;
+			
+			opcode_2_ = 0;
+			func3_2_ = 0;
+			func7_2_ = 0;
+			ps1_2 = 0;		
+			ps2_2 = 0;
+			pd_2 = 0;
+			instr_2_ = 0;
 		end
 		
-		en_flag_o = (en_flag_i/* || RS_filled*/);
+		//$display("rename pd_1 = %d", pd_1);
+		//$display("rename pd_2 = %d", pd_2);
+		en_flag_o = en_flag_i;
 		c_o = c_i;
+		PC1_o = PC1_i;
+		PC2_o = PC2_i;
 	end
-
+	
 endmodule
