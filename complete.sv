@@ -396,7 +396,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 							f_flag_1 = 1;
 							f_data_1 = result_1;
 						end
-						else
+						else begin
 							f_flag_1 = 0;
 						end
 
@@ -468,7 +468,7 @@ module complete(c_i, en_flag_i, result_1, result_dest_1, result_valid_1, result_
 							f_flag_3 = 1;
 							f_data_3 = result_3;
 						end
-						else
+						else begin
 							f_flag_3 = 0;
 						end
 			
